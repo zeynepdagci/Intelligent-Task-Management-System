@@ -1,4 +1,3 @@
-import * as React from 'react';
 import { alpha, type Theme, type Components } from '@mui/material/styles';
 import { outlinedInputClasses } from '@mui/material/OutlinedInput';
 import { svgIconClasses } from '@mui/material/SvgIcon';
