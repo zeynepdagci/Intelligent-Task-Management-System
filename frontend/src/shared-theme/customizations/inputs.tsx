@@ -379,6 +379,12 @@ export const inputsCustomizations: Components<Theme> = {
     styleOverrides: {
       input: {
         padding: 0,
+        '&.MuiInputBase-inputMultiline': {
+          boxSizing: 'border-box',
+          overflowX: 'hidden',
+          wordBreak: 'break-word',
+          whiteSpace: 'pre-wrap',
+        },
       },
       root: ({ theme }) => ({
         padding: '8px 12px',
@@ -399,24 +405,6 @@ export const inputsCustomizations: Components<Theme> = {
             borderColor: gray[500],
           },
         }),
-        variants: [
-          {
-            props: {
-              size: 'small',
-            },
-            style: {
-              height: '2.25rem',
-            },
-          },
-          {
-            props: {
-              size: 'medium',
-            },
-            style: {
-              height: '2.5rem',
-            },
-          },
-        ],
       }),
       notchedOutline: {
         border: 'none',
