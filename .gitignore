@@ -1,1 +1,13 @@
+# VS Code and venv
 venv/
+.vscode/
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# IPython/Jupyter/SymPy temp files
+*.ipynb_checkpoints/
+*.1
+*.out
+*.log
