@@ -11,3 +11,9 @@ __pycache__/
 *.1
 *.out
 *.log
+
+# model files
+models/
+*.safetensors
+*.bin
+*.json

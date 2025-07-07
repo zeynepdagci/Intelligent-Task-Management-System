@@ -1,16 +1,23 @@
 from fastapi import FastAPI
-from app.model_inference.model_loader import load_pytorch_model
+from pydantic import BaseModel
+from app.model_inference.model_loader import get_or_download_model
 
 app = FastAPI()
 
-# Use the real path when you add your model file
-# model = load_pytorch_model("models/distilbert_pytorch/pytorch_model.bin")
+# For local dev, use local path; for AWS, provide bucket and key, and use /tmp
+tokenizer, model = get_or_download_model("models/distilbert_pytorch")
+# Example for Lambda (uncomment when ready): 
+# tokenizer, model = get_or_download_model("/tmp/distilbert_pytorch", bucket="your-bucket", key="distilbert_pytorch.tar.gz")
 
-@app.get("/")
-def read_root():
-    return {"msg": "Hello from the Baseline API!"}
+class TaskRequest(BaseModel):
+    description: str
 
-@app.post("/classify")
-def classify_task(task: dict):
-    # Use the loaded model to make a prediction later
-    return {"category": "Bug", "assignedTo": "Dev A"}
+@app.post("/classify/")
+def classify_task(request: TaskRequest):
+    import torch
+    inputs = tokenizer(request.description, return_tensors="pt", truncation=True, padding=True)
+    with torch.no_grad():
+        outputs = model(**inputs)
+        logits = outputs.logits
+        predicted_class = logits.argmax(dim=1).item()
+    return {"label": int(predicted_class)}
