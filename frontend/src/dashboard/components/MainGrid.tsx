@@ -42,6 +42,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useDroppable } from '@dnd-kit/core';
+import { v4 as uuidv4 } from 'uuid';
 
 const initialTasks = [
   { id: '1', title: 'Setup project', status: 'To-Do', label: 'Bug Fix', assignee: '👤', description: '', date: '' },
@@ -185,13 +186,34 @@ export default function MainGrid() {
   };
 
   const handleAddTask = () => {
-    const newId = (tasks.length + 1).toString();
+    const newId = uuidv4();
     setTasks([...tasks, { id: newId, ...newTask }]);
     setOpenDialog(false);
     setNewTask({ title: '', label: 'Bug Fix', assignee: '👤', status: 'To-Do', description: '', date: '' });
   };
 
   const activeTask = tasks.find((t) => t.id === activeId);
+
+  async function classifyLabel(description: string): Promise<string> {
+  const response = await fetch("http://localhost:8000/classify/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ description })
+  });
+  const data = await response.json();
+  return data.label; // "Bug Fix", "Feature Request", "Documentation"
+  }
+  const handleOpenDialog = (column: string) => {
+    setNewTask({
+      title: '',
+      label: '',
+      assignee: '👤',
+      status: column,
+      description: '',
+      date: ''
+    });
+    setOpenDialog(true);
+  };
 
   return (
     <Box sx={{ px: 4, py: 2, width: '100%' }}>
@@ -248,7 +270,7 @@ export default function MainGrid() {
                   <Box display="flex" justifyContent="space-between" alignItems="center">
                     <Typography variant="h6">{column}</Typography>
                     <Tooltip title="Add task">
-                      <IconButton size="small" onClick={() => setOpenDialog(true)}>
+                      <IconButton size="small" onClick={() => handleOpenDialog(column)}>
                         <AddIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
@@ -334,10 +356,22 @@ export default function MainGrid() {
                 multiline
                 minRows={1}
                 value={newTask.description}
-                onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                onChange={async (e) => {
+                  const desc = e.target.value;
+                  setNewTask((prev) => ({ ...prev, description: desc }));
+
+                  if (desc.length > 5) {
+                    try {
+                      const predicted = await classifyLabel(desc);
+                      setNewTask((prev) => ({ ...prev, label: predicted }));
+                    } catch (error) {
+                      console.error("Prediction error:", error);
+                    }
+                  }
+                }}
                 variant="outlined"
                 size="small"
-              />
+              />              
             </Box>
 
             <Box>

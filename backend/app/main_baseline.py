@@ -1,8 +1,20 @@
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 from pydantic import BaseModel
 from app.model_inference.model_loader import get_or_download_model
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],  # Only your frontend origin
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+LABELS = ["Bug Fix", "Feature Request", "Documentation"]
 
 # For local dev, use local path; for AWS, provide bucket and key, and use /tmp
 tokenizer, model = get_or_download_model("models/distilbert_pytorch")
@@ -20,4 +32,7 @@ def classify_task(request: TaskRequest):
         outputs = model(**inputs)
         logits = outputs.logits
         predicted_class = logits.argmax(dim=1).item()
-    return {"label": int(predicted_class)}
+    return {
+        "label_index": predicted_class,
+        "label": LABELS[predicted_class]
+    }
