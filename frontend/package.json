@@ -19,6 +19,7 @@
     "@mui/material": "^7.1.2",
     "@mui/system": "^7.1.1",
     "@mui/x-charts": "^8.5.3",
+    "@mui/x-data-grid": "^8.7.0",
     "@mui/x-data-grid-pro": "^8.5.3",
     "@mui/x-date-pickers": "^8.5.3",
     "@mui/x-tree-view": "^8.5.3",
@@ -26,6 +27,7 @@
     "dayjs": "^1.11.13",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.3",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
