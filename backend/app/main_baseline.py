@@ -81,12 +81,18 @@ def update_member(email: str, member: TeamMember):
 @app.post("/classify/")
 def classify_task(request: TaskRequest):
     import torch
+    if (request.description == None):
+        raise HTTPException(status_code=400, detail="Task description cannot be empty.")
+
     inputs = tokenizer(request.description, return_tensors="pt", truncation=True, padding=True)
     with torch.no_grad():
         outputs = model(**inputs)
         logits = outputs.logits
         predicted_class = logits.argmax(dim=1).item()
+        probabilities = torch.nn.functional.softmax(logits, dim=1).squeeze().tolist()
+        confidence_score = round(probabilities[predicted_class], 4)
     return {
         "label_index": predicted_class,
-        "label": LABELS[predicted_class]
+        "label": LABELS[predicted_class],
+        "confidence": confidence_score
     }

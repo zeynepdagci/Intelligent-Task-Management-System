@@ -2,8 +2,8 @@ import os
 
 # USE FOR NON QUANTIZED VERSION OF DISTILBERT
 def load_pytorch_model(model_dir):
-    from transformers import DistilBertTokenizer, DistilBertForSequenceClassification
-    tokenizer = DistilBertTokenizer.from_pretrained(model_dir)
+    from transformers import DistilBertTokenizerFast, DistilBertForSequenceClassification
+    tokenizer = DistilBertTokenizerFast.from_pretrained(model_dir)
     model = DistilBertForSequenceClassification.from_pretrained(model_dir, num_labels=3)
     model.eval()
     return tokenizer, model
