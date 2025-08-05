@@ -42,21 +42,11 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useDroppable } from '@dnd-kit/core';
-import { v4 as uuidv4 } from 'uuid';
+import { useEffect } from 'react';
+import { Chip } from '@mui/material';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 
-const initialTasks = [
-  { id: '1', title: 'Setup project', status: 'To-Do', label: 'Bug Fix', assignee: '👤', description: '', date: '' },
-  { id: '2', title: 'Design UI', status: 'To-Do', label: 'Feature Request', assignee: '👩‍🎨', description: '', date: '' },
-  { id: '3', title: 'Implement backend', status: 'In Progress', label: 'Bug Fix', assignee: '👨‍💻', description: '', date: '' },
-  { id: '4', title: 'Integrate API', status: 'In Progress', label: 'Feature Request', assignee: '👩‍💻', description: '', date: '' },
-  { id: '6', title: 'Deploy to production', status: 'Complete', label: 'Documentation', assignee: '👨‍🏫', description: '', date: '' },
-  { id: '7', title: 'Deploy to UAT', status: 'To-Do', label: 'Documentation', assignee: '👨‍🏫', description: '', date: '' }
-];
-
-const columns = ['To-Do', 'In Progress', 'Complete'];
-const labels = ['All', 'Bug Fix', 'Feature Request', 'Documentation'];
-
-const getLabelIcon = (label: string) => {
+const getLabelIcon = (label: string): React.ReactElement | undefined => {
   switch (label) {
     case 'Bug Fix':
       return <BugReportIcon fontSize="small" color="error" />;
@@ -65,9 +55,25 @@ const getLabelIcon = (label: string) => {
     case 'Documentation':
       return <DescriptionIcon fontSize="small" color="info" />;
     default:
-      return null;
+      return undefined;
   }
 };
+
+const getLabelColor = (label: string) => {
+  switch (label) {
+    case 'Bug Fix':
+      return { bg: '#FFEBEE', color: '#C62828' };
+    case 'Feature Request':
+      return { bg: '#E3F2FD', color: '#1565C0' };
+    case 'Documentation':
+      return { bg: '#F3E5F5', color: '#6A1B9A' };
+    default:
+      return { bg: '#E0E0E0', color: '#424242' };
+  }
+};
+
+const columns = ['To-Do', 'In Progress', 'Complete'];
+const labels = ['All', 'Bug Fix', 'Feature Request', 'Documentation'];
 
 function SortableTask({ task }: { task: any }) {
   const {
@@ -89,24 +95,92 @@ function SortableTask({ task }: { task: any }) {
     zIndex: isDragging ? 1000 : 'auto'
   };
 
+  const isOverdue = (dateStr: string) => {
+    const today = new Date().toISOString().split("T")[0];
+    return dateStr < today;
+  };
+
   return (
     <Card
       ref={setNodeRef}
       {...attributes}
       {...listeners}
       variant="outlined"
-      sx={{ borderRadius: 2, ...style, cursor: 'grab' }}
+      sx={{
+        borderRadius: 2,
+        borderLeft: `4px solid ${getLabelColor(task.label).color}`,
+        ...style,
+        cursor: 'grab',
+        transition: '0.2s',
+        '&:hover': {
+          boxShadow: 4,
+          transform: 'scale(1.01)'
+        }
+      }}
     >
-      <CardContent>
+      <CardContent sx={{ px: 2, py: 1.5 }}>
         <Stack spacing={1}>
-          <Stack direction="row" alignItems="center" spacing={1}>
-            {getLabelIcon(task.label)}
-            <Typography variant="caption">{task.label}</Typography>
-          </Stack>
-          <Typography variant="body1">{task.title}</Typography>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Box flexGrow={1} />
-            <Avatar sx={{ width: 24, height: 24, fontSize: 14 }}>{task.assignee}</Avatar>
+          <Chip variant="outlined"
+            icon={getLabelIcon(task.label)}
+            label={task.label}
+            size="small"
+            sx={{
+              ...getLabelColor(task.label),
+              backgroundColor: getLabelColor(task.label).bg,
+              color: getLabelColor(task.label).color,
+              width: 'fit-content',
+              fontWeight: 700
+            }}
+          />
+          <Typography variant="body1" sx={{ fontWeight: 700 }}>
+            {task.title}
+          </Typography>
+          <Box height={4} />
+          <Stack spacing={1}>
+            <Chip
+              variant="outlined"
+              avatar={
+                <Avatar
+                  sx={{
+                    width: 20,
+                    height: 20,
+                    fontSize: 12,
+                    bgcolor: '#C8E6C9'
+                  }}
+                >
+                  {/* {task.assignee?.[0] || '👤'} */}
+                </Avatar>
+              }
+              label={task.assignee}
+              size="small"
+              sx={{
+                backgroundColor: '#E8F5E9',
+                color: '#388E3C',
+                width: 'fit-content',
+                pl: 0,
+                pr: 1,
+                '.MuiChip-avatar': {
+                  marginLeft: 0,
+                  marginRight: 0
+                }
+              }}
+            />
+
+            {task.date && (
+              <Chip variant="outlined"
+                icon={<CalendarMonthIcon sx={{ fontSize: 16 }} />}
+                label={task.date}
+                size="small"
+                sx={{
+                  backgroundColor: isOverdue(task.date) ? '#d816168a' : '#FFF3E0',
+                  color: isOverdue(task.date) ? '#C62828' : '#FB8C00',
+                  width: 'fit-content',
+                  '.MuiChip-icon': {
+                    marginRight: 0.5
+                  }
+                }}
+              />
+            )}
           </Stack>
         </Stack>
       </CardContent>
@@ -134,7 +208,7 @@ function DroppableColumn({ id, children }: { id: string; children: React.ReactNo
 
 export default function MainGrid() {
   const theme = useTheme();
-  const [tasks, setTasks] = useState(initialTasks);
+  const [tasks, setTasks] = useState<any[]>([]);
   const [selectedLabel, setSelectedLabel] = useState('All');
   const [openDialog, setOpenDialog] = useState(false);
   const [newTask, setNewTask] = useState({
@@ -147,13 +221,36 @@ export default function MainGrid() {
   });
   const [activeId, setActiveId] = useState<string | null>(null);
 
+  useEffect(() => {
+    async function fetchTasks() {
+      try {
+        const response = await fetch("http://localhost:8000/tasks");
+        const data = await response.json();
+        const backendTasks = data.tasks.map((task: any) => ({
+          id: task.task_id,
+          title: task.title,
+          label: task.label,
+          assignee: task.assigned_to,
+          status: task.status,
+          description: task.description,
+          date: task.due_date
+        }));
+        setTasks(backendTasks);
+      } catch (error) {
+        console.error("Error fetching tasks:", error);
+      }
+    }
+
+    fetchTasks();
+  }, []);
+
   const sensors = useSensors(useSensor(PointerSensor));
 
   const handleDragStart = (event: any) => {
     setActiveId(event.active.id);
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
     if (!over || active.id === over.id.toString()) return;
@@ -165,9 +262,12 @@ export default function MainGrid() {
     const overTask = tasks.find((t) => t.id === over.id.toString());
     const overTaskColumn = overTask?.status;
 
+    let newStatus: string | null = null;
+
     if (isOverColumn) {
+      newStatus = over.id.toString();
       setTasks((prev) =>
-        prev.map((t) => (t.id === active.id ? { ...t, status: over.id.toString() } : t))
+        prev.map((t) => (t.id === active.id ? { ...t, status: newStatus } : t))
       );
     } else if (overTask && overTaskColumn) {
       if (activeTask.status === overTaskColumn) {
@@ -178,18 +278,58 @@ export default function MainGrid() {
         const rest = tasks.filter((t) => t.status !== activeTask.status);
         setTasks([...rest, ...reordered]);
       } else {
+        newStatus = overTaskColumn;
         setTasks((prev) =>
-          prev.map((t) => (t.id === active.id ? { ...t, status: overTaskColumn } : t))
+          prev.map((t) => (t.id === active.id ? { ...t, status: newStatus } : t))
         );
+      }
+    }
+
+    if (newStatus) {
+      try {
+        await fetch(`http://localhost:8000/task/${active.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: newStatus })
+        });
+      } catch (error) {
+        console.error("Failed to update task status in backend:", error);
       }
     }
   };
 
-  const handleAddTask = () => {
-    const newId = uuidv4();
-    setTasks([...tasks, { id: newId, ...newTask }]);
-    setOpenDialog(false);
-    setNewTask({ title: '', label: 'Bug Fix', assignee: '👤', status: 'To-Do', description: '', date: '' });
+  const handleAddTask = async () => {
+    try {
+      const response = await fetch("http://localhost:8000/tasks", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          title: newTask.title,
+          label: newTask.label,
+          assigned_to: newTask.assignee,
+          description: newTask.description,
+          due_date: newTask.date,
+          status: newTask.status
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setTasks([...tasks, {
+          id: data.task.task_id,
+          ...newTask
+        }]);
+        setOpenDialog(false);
+        setNewTask({ title: '', label: 'Bug Fix', assignee: '👤', status: 'To-Do', description: '', date: '' });
+      } else {
+        console.error("Failed to create task:", data.detail);
+      }
+    } catch (error) {
+      console.error("Error creating task:", error);
+    }
   };
 
   const activeTask = tasks.find((t) => t.id === activeId);
@@ -286,7 +426,7 @@ export default function MainGrid() {
                       </IconButton>
                     </Tooltip>
                   </Box>
-
+                  
                   <DroppableColumn id={column}>
                     <SortableContext items={filtered.map((task) => task.id)} strategy={verticalListSortingStrategy}>
                       {filtered.map((task) => (
@@ -294,10 +434,6 @@ export default function MainGrid() {
                       ))}
                     </SortableContext>
                   </DroppableColumn>
-
-                  {filtered.length === 0 && (
-                    <Box sx={{ textAlign: 'center', color: 'text.secondary', fontSize: 14 }}>Add task</Box>
-                  )}
                 </Stack>
               </Paper>
             );

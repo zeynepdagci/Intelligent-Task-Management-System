@@ -1,4 +1,6 @@
 import boto3
+import uuid
+from datetime import datetime
 
 dynamodb = boto3.resource(
     'dynamodb',
@@ -7,6 +9,7 @@ dynamodb = boto3.resource(
 
 # cached_table = dynamodb.Table('')
 team_table = dynamodb.Table('TeamMembers')
+tasks_table = dynamodb.Table('Tasks')
 
 def get_all_team_members():
     response = team_table.scan()
@@ -63,3 +66,34 @@ def update_team_member(name: str, email: str, role: str, skills: list):
 #         "category": category,
 #         "assignedTo": assigned_to
 #     })
+
+def create_task(task_data: dict) -> dict:
+    task_id = str(uuid.uuid4())
+    created_at = datetime.utcnow().isoformat()
+
+    item = {
+        "task_id": task_id,
+        "title": task_data.get("title"),
+        "label": task_data.get("label"),
+        "assigned_to": task_data.get("assigned_to"),
+        "description": task_data.get("description"),
+        "due_date": task_data.get("due_date"),
+        "created_at": created_at,
+        "status": task_data.get("status", "todo")
+    }
+
+    tasks_table.put_item(Item=item)
+    return item
+
+def get_all_tasks() -> list:
+    response = tasks_table.scan()
+    return response.get("Items", [])
+
+def update_task_status(task_id: str, new_status: str):
+    print(f"Updating task {task_id} to status: {new_status}")
+    tasks_table.update_item(
+        Key={"task_id": task_id},
+        UpdateExpression="SET #s = :s",
+        ExpressionAttributeNames={"#s": "status"},
+        ExpressionAttributeValues={":s": new_status}
+    )

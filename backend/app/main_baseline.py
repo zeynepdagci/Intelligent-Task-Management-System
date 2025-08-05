@@ -1,15 +1,11 @@
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI
 from pydantic import BaseModel
 from app.model_inference.model_loader import get_or_download_model
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
 from typing import List
-from .utils.dynamodb import add_team_member
-from .utils.dynamodb import get_all_team_members
-from .utils.dynamodb import delete_team_member
-from .utils.dynamodb import update_team_member
+from .utils.dynamodb import add_team_member, get_all_team_members, delete_team_member, update_team_member
 from .utils.matching_assignee import find_best_assignee
+from .utils.dynamodb import create_task, get_all_tasks, update_task_status
 
 app = FastAPI()
 
@@ -31,6 +27,9 @@ tokenizer, model = get_or_download_model("models/distilbert_pytorch")
 
 class TaskRequest(BaseModel):
     description: str
+
+class TaskStatusUpdate(BaseModel):
+    status: str
 
 class TeamMember(BaseModel):
     name: str
@@ -105,3 +104,28 @@ def assign_task(request: TaskRequest):
     
     result = find_best_assignee(request.description)
     return result
+
+@app.post("/tasks")
+def api_create_task(task: dict):
+    try:
+        new_task = create_task(task)
+        return {"message": "Task created", "task": new_task}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/tasks")
+def api_get_tasks():
+    try:
+        tasks = get_all_tasks()
+        return {"tasks": tasks}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/task/{task_id}")
+def update_task(task_id: str, update: TaskStatusUpdate):
+    try:
+        update_task_status(task_id, update.status)
+        return {"message": "Task status updated successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
