@@ -20,6 +20,20 @@ def add_team_member(name: str, email: str, role: str, skills: list):
         "skills": skills
     })
 
+# TO ADD NEW TEAM MEMBERS FAST / WILL BE DELETED LATER!!!!
+# i added the csv file in root directory then deleted to avoid committing it.
+
+# import pandas as pd
+# df = pd.read_csv("../team_members.csv")
+# for _, row in df.iterrows():
+#     name = row["name"]
+#     email = row["email"]
+#     role = row["role"]
+#     skills = [skill.strip() for skill in row["skills"].split(",") if skill.strip()]
+#     print(f"Uploading: {name}, {email}, {role}, {skills}")
+#     add_team_member(name, email, role, skills)
+
+
 def delete_team_member(email: str):
     team_table.delete_item(Key={"email": email
     })

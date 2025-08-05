@@ -9,6 +9,7 @@ from .utils.dynamodb import add_team_member
 from .utils.dynamodb import get_all_team_members
 from .utils.dynamodb import delete_team_member
 from .utils.dynamodb import update_team_member
+from .utils.matching_assignee import find_best_assignee
 
 app = FastAPI()
 
@@ -96,3 +97,11 @@ def classify_task(request: TaskRequest):
         "label": LABELS[predicted_class],
         "confidence": confidence_score
     }
+
+@app.post("/assign/")
+def assign_task(request: TaskRequest):
+    if (request.description == None):
+        raise HTTPException(status_code=400, detail="Task description is required.")
+    
+    result = find_best_assignee(request.description)
+    return result

@@ -195,14 +195,25 @@ export default function MainGrid() {
   const activeTask = tasks.find((t) => t.id === activeId);
 
   async function classifyLabel(description: string): Promise<string> {
-  const response = await fetch("http://localhost:8000/classify/", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ description })
-  });
-  const data = await response.json();
-  return data.label; // "Bug Fix", "Feature Request", "Documentation"
+    const response = await fetch("http://localhost:8000/classify/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ description })
+    });
+    const data = await response.json();
+    return data.label;
   }
+
+  async function suggestAssignee(description: string): Promise<string> {
+    const response = await fetch("http://localhost:8000/assign/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ description }),
+    });
+    const data = await response.json();
+    return data.assigned_to;
+  }
+
   const handleOpenDialog = (column: string) => {
     setNewTask({
       title: '',
@@ -362,16 +373,23 @@ export default function MainGrid() {
 
                   if (desc.length > 5) {
                     try {
-                      const predicted = await classifyLabel(desc);
-                      setNewTask((prev) => ({ ...prev, label: predicted }));
+                      const [predictedLabel, suggestedAssignee] = await Promise.all([
+                        classifyLabel(desc),
+                        suggestAssignee(desc)
+                      ]);
+                      setNewTask((prev) => ({
+                        ...prev,
+                        label: predictedLabel,
+                        assignee: suggestedAssignee
+                      }));
                     } catch (error) {
-                      console.error("Prediction error:", error);
+                      console.error("Prediction or suggestion error:", error);
                     }
                   }
                 }}
                 variant="outlined"
                 size="small"
-              />              
+              />
             </Box>
 
             <Box>
