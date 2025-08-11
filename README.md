@@ -19,15 +19,21 @@ A cloud‑native task management system that classifies software tasks and sugge
 
 **Frontend**
 
-* React (Vite) • TypeScript • Vercel
+* React (Vite)
+* TypeScript
+* Vercel
 
 **Serverless Backend**
 
-* FastAPI (Python) • AWS Lambda • Amazon API Gateway
+* FastAPI (Python)
+* AWS Lambda
+* Amazon API Gateway
 
 **AI / NLP**
 
-* Hugging Face Transformers • DistilBERT • ONNX Runtime
+* Hugging Face Transformers
+* DistilBERT
+* ONNX Runtime
 * Cosine similarity
 
 **Data & Caching**
