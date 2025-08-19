@@ -46,6 +46,8 @@ import { useEffect } from 'react';
 import { Chip } from '@mui/material';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 
+const API_BASE = import.meta.env.VITE_API_BASE as string;
+
 const getLabelIcon = (label: string): React.ReactElement | undefined => {
   switch (label) {
     case 'Bug Fix':
@@ -224,7 +226,7 @@ export default function MainGrid() {
   useEffect(() => {
     async function fetchTasks() {
       try {
-        const response = await fetch("http://localhost:8000/tasks");
+        const response = await fetch(`${API_BASE}/tasks`);
         const data = await response.json();
         const backendTasks = data.tasks.map((task: any) => ({
           id: task.task_id,
@@ -287,7 +289,7 @@ export default function MainGrid() {
 
     if (newStatus) {
       try {
-        await fetch(`http://localhost:8000/task/${active.id}`, {
+        await fetch(`${API_BASE}/task/${active.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ status: newStatus })
@@ -300,7 +302,7 @@ export default function MainGrid() {
 
   const handleAddTask = async () => {
     try {
-      const response = await fetch("http://localhost:8000/tasks", {
+      const response = await fetch(`${API_BASE}/tasks`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -335,7 +337,7 @@ export default function MainGrid() {
   const activeTask = tasks.find((t) => t.id === activeId);
 
   async function classifyLabel(description: string): Promise<string> {
-    const response = await fetch("http://localhost:8000/classify/", {
+    const response = await fetch(`${API_BASE}/classify`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ description })
@@ -345,7 +347,7 @@ export default function MainGrid() {
   }
 
   async function suggestAssignee(description: string): Promise<string> {
-    const response = await fetch("http://localhost:8000/assign/", {
+    const response = await fetch(`${API_BASE}/assign`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ description }),
@@ -426,7 +428,7 @@ export default function MainGrid() {
                       </IconButton>
                     </Tooltip>
                   </Box>
-                  
+
                   <DroppableColumn id={column}>
                     <SortableContext items={filtered.map((task) => task.id)} strategy={verticalListSortingStrategy}>
                       {filtered.map((task) => (

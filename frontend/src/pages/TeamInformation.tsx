@@ -18,6 +18,8 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button
 } from '@mui/material';
 
+const API_BASE = import.meta.env.VITE_API_BASE as string;
+
 const xThemeComponents = {
   ...chartsCustomizations,
   ...dataGridCustomizations,
@@ -74,7 +76,7 @@ export default function TeamInformation(props: { disableCustomTheme?: boolean })
   // Function to fetch data from FastAPI
   const loadTeamMembers = async () => {
     try {
-      const res = await fetch('http://localhost:8000/team_members');
+      const res = await fetch(`${API_BASE}/team_members`);
       const data = await res.json();
       const processed = data.map((item: any, index: number) => ({
         ...item,
@@ -122,7 +124,7 @@ export default function TeamInformation(props: { disableCustomTheme?: boolean })
     };
 
     try {
-      await fetch('http://localhost:8000/add_team_member', {
+      await fetch(`${API_BASE}/add_team_member`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -147,7 +149,7 @@ export default function TeamInformation(props: { disableCustomTheme?: boolean })
     if (!window.confirm("Are you sure you want to delete this team member?")) return;
 
     try {
-      await fetch(`http://localhost:8000/team_member/${email}`, {
+      await fetch(`${API_BASE}/team_member/${email}`, {
         method: 'DELETE',
       });
       await loadTeamMembers();
@@ -165,7 +167,7 @@ export default function TeamInformation(props: { disableCustomTheme?: boolean })
   const handleEditSave = async () => {
     if (!editMember) return;
     try {
-      await fetch(`http://localhost:8000/team_member/${editMember.email}`, {
+      await fetch(`${API_BASE}/team_member/${editMember.email}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
