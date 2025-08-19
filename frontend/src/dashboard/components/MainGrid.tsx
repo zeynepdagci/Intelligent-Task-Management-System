@@ -45,8 +45,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { useEffect } from 'react';
 import { Chip } from '@mui/material';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
-
-const API_BASE = import.meta.env.VITE_API_BASE as string;
+import { API_BASE } from "../../lib/api";
 
 const getLabelIcon = (label: string): React.ReactElement | undefined => {
   switch (label) {

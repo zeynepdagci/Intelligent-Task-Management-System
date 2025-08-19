@@ -17,8 +17,8 @@ import EditIcon from '@mui/icons-material/Edit'
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button
 } from '@mui/material';
+import { API_BASE } from "../lib/api";
 
-const API_BASE = import.meta.env.VITE_API_BASE as string;
 
 const xThemeComponents = {
   ...chartsCustomizations,
