@@ -1,4 +1,4 @@
-type Key = "baseline" | "cached" | "quantized" | "quantizedCached";
+type Key = "baseline" | "quantized" | "cached" | "quantizedCached";
 
 const BACKENDS: Record<Key, string> = {
   baseline: import.meta.env.VITE_API_BASE_BASELINE as string,

@@ -8,28 +8,38 @@ def load_pytorch_model(model_dir):
     model.eval()
     return tokenizer, model
 
-# !!!! do this when you will use s3 !!!!
-def download_model_from_s3(bucket, key, local_dir):
-    import boto3, tarfile
+def model_from_s3(bucket, key_prefix, local_dir):
+    import boto3
+    import os
+
     s3 = boto3.client('s3')
-    tar_path = '/tmp/model.tar.gz'
-    s3.download_file(bucket, key, tar_path)
-    with tarfile.open(tar_path) as tar:
-        tar.extractall(path=local_dir)
-    print(f"Downloaded and extracted {key} from S3 bucket {bucket} to {local_dir}")
+    model_files = [
+        "config.json",
+        "model.safetensors",
+        "special_tokens_map.json",
+        "tokenizer_config.json",
+        "tokenizer.json",
+        "vocab.txt"
+    ]
+
+    if not os.path.exists(local_dir):
+        os.makedirs(local_dir)
+
+    for filename in model_files:
+        s3_key = f"{key_prefix}/{filename}"
+        local_path = os.path.join(local_dir, filename)
+        if not os.path.exists(local_path):
+            print(f"Downloading {s3_key} to {local_path}")
+            s3.download_file(bucket, s3_key, local_path)
+
+    print(f"Downloaded model files from s3://{bucket}/{key_prefix} to {local_dir}")
+
 
 def get_or_download_model(local_dir, bucket=None, key=None):
     if not os.path.exists(local_dir) or not os.listdir(local_dir):
         if bucket and key:
-            download_model_from_s3(bucket, key, local_dir)
+            model_from_s3(bucket, key, local_dir)
         else:
             raise FileNotFoundError("Model directory not found and no S3 info given.")
     return load_pytorch_model(local_dir)
 
-# USE FOR QUANTIZED VERSION OF DISTILBERT
-def load_onnx_model(path):
-    import onnxruntime as ort
-    print(f"Loading ONNX model from {path}")
-    # session = ort.InferenceSession(path)  # Uncomment when you have the model
-    # return session
-    return "onnx_model (placeholder)"
