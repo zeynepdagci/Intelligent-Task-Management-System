@@ -118,7 +118,6 @@ function SortableTask({ task }: { task: any }) {
                     bgcolor: '#C8E6C9'
                   }}
                 >
-                  {/* {task.assignee?.[0] || '👤'} */}
                 </Avatar>
               }
               label={task.assignee}
@@ -225,7 +224,6 @@ export default function MainGrid() {
       }
     }
   }
-  // -------------------------------------------------------
 
   useEffect(() => {
     async function fetchTasks() {
@@ -495,7 +493,7 @@ export default function MainGrid() {
 
                   if (debounceRef.current) window.clearTimeout(debounceRef.current);
 
-                  if (desc.trim().length < 10) {
+                  if (desc.trim().length < 5) {
                     lastTextRef.current = "";
                     return;
                   }
@@ -508,7 +506,7 @@ export default function MainGrid() {
                 }}
                 onBlur={() => {
                   const desc = newTask.description;
-                  if (desc.trim().length >= 10 && lastTextRef.current !== desc) {
+                  if (desc.trim().length >= 5 && lastTextRef.current !== desc) {
                     if (debounceRef.current) window.clearTimeout(debounceRef.current);
                     lastTextRef.current = desc;
                     runPredictions(desc);
