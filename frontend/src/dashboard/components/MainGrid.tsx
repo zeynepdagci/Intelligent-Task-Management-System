@@ -1,48 +1,23 @@
 import React, { useState } from 'react';
 import {
-  Box,
-  Typography,
-  Card,
-  CardContent,
-  Stack,
-  Paper,
-  Avatar,
-  Tooltip,
-  IconButton,
-  useTheme,
-  TextField,
-  MenuItem,
-  Select,
-  FormControl,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button
+  Box, Typography, Card, CardContent, Stack, Paper, Avatar, Tooltip, IconButton, useTheme, TextField, MenuItem,
+  Select, FormControl, Dialog, DialogTitle, DialogContent, DialogActions, Button
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import BugReportIcon from '@mui/icons-material/BugReport';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import DescriptionIcon from '@mui/icons-material/Description';
 import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-  DragOverlay
+  DndContext, closestCenter, PointerSensor, useSensor,
+  useSensors, type DragEndEvent, DragOverlay
 } from '@dnd-kit/core';
 import {
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-  defaultAnimateLayoutChanges,
-  arrayMove
+  SortableContext, useSortable, verticalListSortingStrategy,
+  defaultAnimateLayoutChanges, arrayMove
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useDroppable } from '@dnd-kit/core';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Chip } from '@mui/material';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import { API_BASE } from "../../lib/api";
@@ -78,16 +53,10 @@ const labels = ['All', 'Bug Fix', 'Feature Request', 'Documentation'];
 
 function SortableTask({ task }: { task: any }) {
   const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging
-  } = useSortable({
-    id: task.id,
-    animateLayoutChanges: defaultAnimateLayoutChanges
-  });
+    attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+      id: task.id,
+      animateLayoutChanges: defaultAnimateLayoutChanges
+    });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -222,6 +191,42 @@ export default function MainGrid() {
   });
   const [activeId, setActiveId] = useState<string | null>(null);
 
+  const DEBOUNCE_MS = 900;
+  const debounceRef = useRef<number| null>(null);
+  const ctrlRef = useRef<AbortController | null>(null);
+  const lastTextRef = useRef<string>("");
+
+  async function runPredictions(desc: string) {
+    if (ctrlRef.current) ctrlRef.current.abort();
+    const ctrl = new AbortController();
+    ctrlRef.current = ctrl;
+
+    try {
+      const [predictedLabel, suggestedAssignee] = await Promise.all([
+        fetch(`${API_BASE}/classify`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ description: desc }),
+          signal: ctrl.signal,
+        }).then(r => r.json()).then(j => j.label),
+
+        fetch(`${API_BASE}/assign`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ description: desc }),
+          signal: ctrl.signal,
+        }).then(r => r.json()).then(j => j.assigned_to),
+      ]);
+
+      setNewTask(prev => ({ ...prev, label: predictedLabel, assignee: suggestedAssignee }));
+    } catch (err: any) {
+      if (err?.name !== "AbortError") {
+        console.error("Prediction error:", err);
+      }
+    }
+  }
+  // -------------------------------------------------------
+
   useEffect(() => {
     async function fetchTasks() {
       try {
@@ -334,26 +339,6 @@ export default function MainGrid() {
   };
 
   const activeTask = tasks.find((t) => t.id === activeId);
-
-  async function classifyLabel(description: string): Promise<string> {
-    const response = await fetch(`${API_BASE}/classify`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ description })
-    });
-    const data = await response.json();
-    return data.label;
-  }
-
-  async function suggestAssignee(description: string): Promise<string> {
-    const response = await fetch(`${API_BASE}/assign`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ description }),
-    });
-    const data = await response.json();
-    return data.assigned_to;
-  }
 
   const handleOpenDialog = (column: string) => {
     setNewTask({
@@ -504,24 +489,29 @@ export default function MainGrid() {
                 multiline
                 minRows={1}
                 value={newTask.description}
-                onChange={async (e) => {
+                onChange={(e) => {
                   const desc = e.target.value;
                   setNewTask((prev) => ({ ...prev, description: desc }));
 
-                  if (desc.length > 5) {
-                    try {
-                      const [predictedLabel, suggestedAssignee] = await Promise.all([
-                        classifyLabel(desc),
-                        suggestAssignee(desc)
-                      ]);
-                      setNewTask((prev) => ({
-                        ...prev,
-                        label: predictedLabel,
-                        assignee: suggestedAssignee
-                      }));
-                    } catch (error) {
-                      console.error("Prediction or suggestion error:", error);
-                    }
+                  if (debounceRef.current) window.clearTimeout(debounceRef.current);
+
+                  if (desc.trim().length < 10) {
+                    lastTextRef.current = "";
+                    return;
+                  }
+
+                  debounceRef.current = window.setTimeout(() => {
+                    if (lastTextRef.current === desc) return;
+                    lastTextRef.current = desc;
+                    runPredictions(desc);
+                  }, DEBOUNCE_MS);
+                }}
+                onBlur={() => {
+                  const desc = newTask.description;
+                  if (desc.trim().length >= 10 && lastTextRef.current !== desc) {
+                    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+                    lastTextRef.current = desc;
+                    runPredictions(desc);
                   }
                 }}
                 variant="outlined"
