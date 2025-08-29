@@ -28,7 +28,7 @@ with torch.no_grad():
             "attention_mask": {0: "batch", 1: "sequence"},
             "last_hidden_state": {0: "batch", 1: "sequence"},
         },
-        opset_version=14,
+        opset_version=14
     )
 
 quantize_dynamic(onnx_fp, q_fp, weight_type=QuantType.QInt8, reduce_range=True, per_channel=False)

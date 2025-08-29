@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 from pydantic import BaseModel
@@ -11,7 +12,8 @@ from app.utils.dynamodb import (
     create_task, get_all_tasks, update_task_status
 )
 from app.utils.matching_assignee import find_best_assignee
-import logging
+import logging, time
+from app.utils.cache import make_cache_key, get_item, update_classify, update_assign
 
 logging.basicConfig(level=logging.INFO)  # to see the logs on CloudWatch
 
@@ -31,22 +33,21 @@ app.add_middleware(
 
 LABELS = ["Bug Fix", "Feature Request", "Documentation"]
 
-# CONFIG SWITCH: ONNX vs PyTorch
-CONFIG_TYPE = os.environ.get("CONFIG_TYPE", "baseline").lower()
+CONFIG_TYPE = os.environ.get("CONFIG_TYPE", "baseline").lower() # Config switch: ONNX vs PyTorch
 USE_ONNX_CLS = "quantized" in CONFIG_TYPE
-# USE_CACHE = "cached" in CONFIG_TYPE later will be implemented
+USE_CACHE = "cached" in CONFIG_TYPE
 BACKEND = "onnx" if USE_ONNX_CLS else "pytorch"
 
-# Common model dir + optional S3 location to be used only when needed
+# S3 location to be used only when needed
 MODEL_DIR = os.environ.get("MODEL_DIR", "/tmp/distilbert_pytorch")
-MODEL_BUCKET = os.environ.get("MODEL_BUCKET")  # e.g. "zeynep-distilbert-models"
-MODEL_KEY_PREFIX = os.environ.get("MODEL_KEY_PREFIX")  # e.g. "models/distilbert_pytorch"
+MODEL_BUCKET = os.environ.get("MODEL_BUCKET")  # In S3, zeynep-distilbert-models
+MODEL_KEY_PREFIX = os.environ.get("MODEL_KEY_PREFIX")  #  models/distilbert_pytorch
 
 os.environ.setdefault("HF_HOME", "/tmp/hf")
 os.environ.setdefault("TRANSFORMERS_CACHE", "/tmp/hf")
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
-# Initialize classifier depending on CONFIG_TYPE
+# Classifier is initialized depending on CONFIG_TYPE
 if USE_ONNX_CLS:
     import onnxruntime as ort
     from transformers import DistilBertTokenizerFast
@@ -146,26 +147,87 @@ def classify_task(request: TaskRequest):
     if not request.description:
         raise HTTPException(status_code=400, detail="Task description cannot be empty.")
 
+    cache_key = make_cache_key(CONFIG_TYPE, request.description)
+    if USE_CACHE:
+        item  = get_item(cache_key)
+        if item  and "classify" in item :
+            c = item ["classify"]
+            try:
+                label_index = LABELS.index(c["label"])
+            except ValueError:
+                label_index = None
+            return {
+                "label_index": label_index,
+                "label": c["label"],
+                "confidence": c["confidence"],
+                "cached": True,
+                "model": c["model"],
+                "updated_at": c["updated_at"]
+            }
+        
     import numpy as np
     logits = infer_logits(request.description) # numpy (1, num_labels)
     probs = (np.exp(logits) / np.exp(logits).sum(axis=1, keepdims=True))[0]
     idx = int(probs.argmax())
     conf = float(probs[idx])
-
+    result = {
+        "label": LABELS[idx],
+        "confidence": str(round(conf, 4)),
+        "model": BACKEND,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+    
+    if USE_CACHE:
+        update_classify(cache_key, request.description[:120], result)
+    
     return {
         "label_index": idx,
-        "label": LABELS[idx],
-        "confidence": round(conf, 4),
-        "backend": BACKEND,
-        "model_dir": MODEL_DIR
+        "label": result["label"],
+        "confidence": result["confidence"],
+        "cached": False,
+        "model": result["model"],
+        "updated_at": result["updated_at"],
     }
-
+    
 @app.post("/assign")
 def assign_task(request: TaskRequest):
     logging.info("Handling /assign with BACKEND=%s", BACKEND)
     if not request.description:
         raise HTTPException(status_code=400, detail="Task description is required.")
-    return find_best_assignee(request.description)
+    
+    cache_key = make_cache_key(CONFIG_TYPE, request.description)
+    if USE_CACHE:
+        item = get_item(cache_key)
+        if item and "assign" in item:
+            a = item["assign"]
+            return {
+                "assigned_to": a["assigned_to"],
+                "similarity": a["similarity"],
+                "cached": True,
+                "model": a["model"],
+                "updated_at": a["updated_at"]
+            }
+
+    # in the case of "miss", it will be computer via PyTorch or ONNX embeddings depending on CONFIG_TYPE
+    assignee = find_best_assignee(request.description)  # returns {assigned_to, similarity}
+    
+    res = {
+        "assigned_to": assignee["assigned_to"],
+        "similarity": str(assignee["similarity"]),
+        "model": BACKEND,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+
+    if USE_CACHE:
+        update_assign(cache_key, request.description[:120], res)
+
+    return {
+        "assigned_to": res["assigned_to"],
+        "similarity": res["similarity"],
+        "cached": False,
+        "model": res["model"],
+        "updated_at": res["updated_at"],
+    }
 
 @app.post("/tasks")
 def api_create_task(task: dict):

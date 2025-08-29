@@ -7,7 +7,6 @@ dynamodb = boto3.resource(
     region_name='eu-west-2',
 )
 
-# cached_table = dynamodb.Table('')
 team_table = dynamodb.Table('TeamMembers')
 tasks_table = dynamodb.Table('Tasks')
 
@@ -55,21 +54,9 @@ def update_team_member(name: str, email: str, role: str, skills: list):
                                 ":skills": skills,
                             })
 
-
-# def get_cached_result(task_description: str):
-#     response = cached_table.get_item(Key={"task": task_description})
-#     return response.get("Item")
-
-# def store_result(task_description: str, category: str, assigned_to: str):
-#     cached_table.put_item(Item={
-#         "task": task_description,
-#         "category": category,
-#         "assignedTo": assigned_to
-#     })
-
 def create_task(task_data: dict) -> dict:
     task_id = str(uuid.uuid4())
-    created_at = datetime.utcnow().isoformat()
+    created_at = datetime.utcnow().isoformat() # try this datetime.now(timezone.utc).isoformat()
 
     item = {
         "task_id": task_id,
