@@ -1,6 +1,6 @@
 import boto3
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 dynamodb = boto3.resource(
     'dynamodb',
@@ -56,7 +56,7 @@ def update_team_member(name: str, email: str, role: str, skills: list):
 
 def create_task(task_data: dict) -> dict:
     task_id = str(uuid.uuid4())
-    created_at = datetime.utcnow().isoformat() # try this datetime.now(timezone.utc).isoformat()
+    created_at = datetime.now(timezone.utc).isoformat()
 
     item = {
         "task_id": task_id,
@@ -83,4 +83,29 @@ def update_task_status(task_id: str, new_status: str):
         UpdateExpression="SET #s = :s",
         ExpressionAttributeNames={"#s": "status"},
         ExpressionAttributeValues={":s": new_status}
+    )
+
+def update_task_db(task_id: str, title: str, label: str, assigned_to: str, description: str, due_date: str, status: str):
+    tasks_table.update_item(
+        Key={"task_id": task_id},
+        UpdateExpression=(
+            "SET #t = :title, #l = :label, #a = :assignee, "
+            "#d = :desc, #due = :due_date, #s = :status"
+        ),
+        ExpressionAttributeNames={
+            "#t": "title",
+            "#l": "label",
+            "#a": "assigned_to",
+            "#d": "description",
+            "#due": "due_date",
+            "#s": "status",
+        },
+        ExpressionAttributeValues={
+            ":title": title,
+            ":label": label,
+            ":assignee": assigned_to,
+            ":desc": description,
+            ":due_date": due_date,
+            ":status": status,
+        },
     )

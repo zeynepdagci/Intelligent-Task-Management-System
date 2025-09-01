@@ -97,3 +97,28 @@ def update_task_status(task_id: str, new_status: str):
         ExpressionAttributeNames={"#s": "status"},
         ExpressionAttributeValues={":s": new_status}
     )
+
+def update_task_db(task_id: str, title: str, label: str, assigned_to: str, description: str, due_date: str, status: str):
+    tasks_table.update_item(
+        Key={"task_id": task_id},
+        UpdateExpression=(
+            "SET #t = :title, #l = :label, #a = :assignee, "
+            "#d = :desc, #due = :due_date, #s = :status"
+        ),
+        ExpressionAttributeNames={
+            "#t": "title",
+            "#l": "label",
+            "#a": "assigned_to",
+            "#d": "description",
+            "#due": "due_date",
+            "#s": "status",
+        },
+        ExpressionAttributeValues={
+            ":title": title,
+            ":label": label,
+            ":assignee": assigned_to,
+            ":desc": description,
+            ":due_date": due_date,
+            ":status": status,
+        },
+    )

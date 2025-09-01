@@ -9,8 +9,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from app.utils.dynamodb import (
     add_team_member, get_all_team_members, delete_team_member, update_team_member,
-    create_task, get_all_tasks, update_task_status
-)
+    create_task, get_all_tasks, update_task_status, update_task_db)
 from app.utils.matching_assignee import find_best_assignee
 import logging, time
 from app.utils.cache import make_cache_key, get_item, update_classify, update_assign
@@ -100,6 +99,14 @@ class TeamMember(BaseModel):
     email: str
     role: str
     skills: List[str]
+
+class TaskUpdate(BaseModel):
+    title: str
+    label: str
+    assigned_to: str
+    description: str
+    due_date: str
+    status: str
 
 @app.get("/team_members")
 def get_members():
@@ -248,11 +255,27 @@ def api_get_tasks():
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.put("/task/{task_id}")
-def update_task(task_id: str, update: TaskStatusUpdate):
+def update_status(task_id: str, update: TaskStatusUpdate):
     try:
         update_task_status(task_id, update.status)
         return {"message": "Task status updated successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.put("/task/{task_id}/update")
+def update_task_details(task_id: str, taskUpdate: TaskUpdate):
+    try:
+        update_task_db(
+            task_id=task_id,
+            title=taskUpdate.title,
+            label=taskUpdate.label,
+            assigned_to=taskUpdate.assigned_to,
+            description=taskUpdate.description,
+            due_date=taskUpdate.due_date,
+            status=taskUpdate.status
+        )
+        return {"message": "Task updated successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
 handler = Mangum(app)

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  Box, Typography, Card, CardContent, Stack, Paper, Avatar, Tooltip, IconButton, useTheme, TextField, MenuItem,
+  Box, Typography, Card, CardContent, Stack, Paper, Tooltip, IconButton, useTheme, TextField, MenuItem,
   Select, FormControl, Dialog, DialogTitle, DialogContent, DialogActions, Button
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
@@ -48,15 +48,32 @@ const getLabelColor = (label: string) => {
   }
 };
 
-const columns = ['To-Do', 'In Progress', 'Complete'];
-const labels = ['All', 'Bug Fix', 'Feature Request', 'Documentation'];
+const columns = ['To-Do', 'In Progress', 'Complete'] as const;
+const labels = ['All', 'Bug Fix', 'Feature Request', 'Documentation'] as const;
 
-function SortableTask({ task }: { task: any }) {
-  const {
-    attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-      id: task.id,
-      animateLayoutChanges: defaultAnimateLayoutChanges
-    });
+type Task = {
+  id: string;
+  title: string;
+  label: string;
+  assignee: string; // stores assignee NAME (from DB)
+  status: (typeof columns)[number];
+  description: string;
+  date: string; // yyyy-mm-dd
+};
+
+type TeamMember = {
+  member_id: string;
+  name: string;      // we show/use this in dropdowns and payloads
+  email?: string;
+  role?: string;
+  avatar_url?: string;
+};
+
+function SortableTask({ task, onOpen }: { task: Task; onOpen?: (t: Task) => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: task.id,
+    animateLayoutChanges: defaultAnimateLayoutChanges
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -76,11 +93,12 @@ function SortableTask({ task }: { task: any }) {
       {...attributes}
       {...listeners}
       variant="outlined"
+      onClick={() => onOpen?.(task)}
       sx={{
         borderRadius: 2,
         borderLeft: `4px solid ${getLabelColor(task.label).color}`,
         ...style,
-        cursor: 'grab',
+        cursor: 'pointer',
         transition: '0.2s',
         '&:hover': {
           boxShadow: 4,
@@ -90,7 +108,8 @@ function SortableTask({ task }: { task: any }) {
     >
       <CardContent sx={{ px: 2, py: 1.5 }}>
         <Stack spacing={1}>
-          <Chip variant="outlined"
+          <Chip
+            variant="outlined"
             icon={getLabelIcon(task.label)}
             label={task.label}
             size="small"
@@ -109,34 +128,19 @@ function SortableTask({ task }: { task: any }) {
           <Stack spacing={1}>
             <Chip
               variant="outlined"
-              avatar={
-                <Avatar
-                  sx={{
-                    width: 20,
-                    height: 20,
-                    fontSize: 12,
-                    bgcolor: '#C8E6C9'
-                  }}
-                >
-                </Avatar>
-              }
               label={task.assignee}
               size="small"
               sx={{
                 backgroundColor: '#E8F5E9',
                 color: '#388E3C',
                 width: 'fit-content',
-                pl: 0,
-                pr: 1,
-                '.MuiChip-avatar': {
-                  marginLeft: 0,
-                  marginRight: 0
-                }
+                pl: 1,
+                pr: 1
               }}
             />
-
             {task.date && (
-              <Chip variant="outlined"
+              <Chip
+                variant="outlined"
                 icon={<CalendarMonthIcon sx={{ fontSize: 16 }} />}
                 label={task.date}
                 size="small"
@@ -144,9 +148,7 @@ function SortableTask({ task }: { task: any }) {
                   backgroundColor: isOverdue(task.date) ? '#d816168a' : '#FFF3E0',
                   color: isOverdue(task.date) ? '#C62828' : '#FB8C00',
                   width: 'fit-content',
-                  '.MuiChip-icon': {
-                    marginRight: 0.5
-                  }
+                  '.MuiChip-icon': { marginRight: 0.5 }
                 }}
               />
             )}
@@ -175,25 +177,61 @@ function DroppableColumn({ id, children }: { id: string; children: React.ReactNo
   );
 }
 
+function AssigneeSelect({
+  value,
+  onChange,
+  team,
+}: {
+  value: string;                    // assignee NAME
+  onChange: (v: string) => void;    // returns NAME
+  team: TeamMember[];
+  placeholder?: string;
+}) {
+  return (
+    <Select
+      fullWidth
+      value={value}
+      onChange={(e) => onChange(e.target.value as string)}
+      size="small"
+      displayEmpty
+      renderValue={(selected) => (selected as string)}
+    >
+      {team.map((m) => (
+        <MenuItem key={m.member_id} value={m.name}>
+          {m.name}
+        </MenuItem>
+      ))}
+    </Select>
+  );
+}
+
 export default function MainGrid() {
   const theme = useTheme();
-  const [tasks, setTasks] = useState<any[]>([]);
-  const [selectedLabel, setSelectedLabel] = useState('All');
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [selectedLabel, setSelectedLabel] = useState<string>('All');
   const [openDialog, setOpenDialog] = useState(false);
-  const [newTask, setNewTask] = useState({
+  const [newTask, setNewTask] = useState<Task>({
+    id: '',
     title: '',
     label: 'Bug Fix',
-    assignee: '👤',
+    assignee: '',
     status: 'To-Do',
     description: '',
     date: ''
   });
   const [activeId, setActiveId] = useState<string | null>(null);
 
+  const [editOpen, setEditOpen] = useState(false);
+  const [editTask, setEditTask] = useState<Task | null>(null);
+
   const DEBOUNCE_MS = 900;
-  const debounceRef = useRef<number| null>(null);
+  const debounceRef = useRef<number | null>(null);
   const ctrlRef = useRef<AbortController | null>(null);
   const lastTextRef = useRef<string>("");
+
+  const [team, setTeam] = useState<TeamMember[]>([]);
+  const [teamLoading, setTeamLoading] = useState<boolean>(false);
+  const [teamError, setTeamError] = useState<string | null>(null);
 
   async function runPredictions(desc: string) {
     if (ctrlRef.current) ctrlRef.current.abort();
@@ -230,7 +268,7 @@ export default function MainGrid() {
       try {
         const response = await fetch(`${API_BASE}/tasks`);
         const data = await response.json();
-        const backendTasks = data.tasks.map((task: any) => ({
+        const backendTasks: Task[] = data.tasks.map((task: any) => ({
           id: task.task_id,
           title: task.title,
           label: task.label,
@@ -248,7 +286,42 @@ export default function MainGrid() {
     fetchTasks();
   }, []);
 
-  const sensors = useSensors(useSensor(PointerSensor));
+  useEffect(() => {
+    let ignore = false;
+    async function fetchTeam() {
+      try {
+        setTeamLoading(true);
+        setTeamError(null);
+        const res = await fetch(`${API_BASE}/team_members`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        const members: TeamMember[] = (data.members ?? data ?? []).map((m: any) => ({
+          member_id: m.member_id ?? m.id ?? String(m.name || m.email),
+          name: m.name ?? m.full_name ?? m.email ?? 'Unknown',
+          email: m.email,
+          role: m.role,
+          avatar_url: m.avatar_url,
+        }));
+
+        if (!ignore) setTeam(members);
+      } catch (err: any) {
+        console.error("Error fetching team members:", err);
+        if (!ignore) setTeamError("Could not load team members");
+      } finally {
+        if (!ignore) setTeamLoading(false);
+      }
+    }
+    fetchTeam();
+    return () => { ignore = true; };
+  }, []);
+
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 } // 8px before drag starts
+    })
+  );
 
   const handleDragStart = (event: any) => {
     setActiveId(event.active.id);
@@ -262,16 +335,16 @@ export default function MainGrid() {
     const activeTask = tasks.find((t) => t.id === active.id);
     if (!activeTask) return;
 
-    const isOverColumn = columns.includes(over.id.toString());
+    const isOverColumn = columns.includes(over.id.toString() as any);
     const overTask = tasks.find((t) => t.id === over.id.toString());
     const overTaskColumn = overTask?.status;
 
-    let newStatus: string | null = null;
+    let newStatus: Task['status'] | null = null;
 
     if (isOverColumn) {
-      newStatus = over.id.toString();
+      newStatus = over.id.toString() as Task['status'];
       setTasks((prev) =>
-        prev.map((t) => (t.id === active.id ? { ...t, status: newStatus } : t))
+        prev.map((t) => (t.id === active.id ? { ...t, status: newStatus! } : t))
       );
     } else if (overTask && overTaskColumn) {
       if (activeTask.status === overTaskColumn) {
@@ -284,7 +357,7 @@ export default function MainGrid() {
       } else {
         newStatus = overTaskColumn;
         setTasks((prev) =>
-          prev.map((t) => (t.id === active.id ? { ...t, status: newStatus } : t))
+          prev.map((t) => (t.id === active.id ? { ...t, status: newStatus! } : t))
         );
       }
     }
@@ -324,10 +397,15 @@ export default function MainGrid() {
       if (response.ok) {
         setTasks([...tasks, {
           id: data.task.task_id,
-          ...newTask
+          title: newTask.title,
+          label: newTask.label,
+          assignee: newTask.assignee,
+          status: newTask.status,
+          description: newTask.description,
+          date: newTask.date
         }]);
         setOpenDialog(false);
-        setNewTask({ title: '', label: 'Bug Fix', assignee: '👤', status: 'To-Do', description: '', date: '' });
+        setNewTask({ id: '', title: '', label: 'Bug Fix', assignee: '', status: 'To-Do', description: '', date: '' });
       } else {
         console.error("Failed to create task:", data.detail);
       }
@@ -338,16 +416,52 @@ export default function MainGrid() {
 
   const activeTask = tasks.find((t) => t.id === activeId);
 
-  const handleOpenDialog = (column: string) => {
+  const handleOpenDialog = (column: Task['status']) => {
     setNewTask({
+      id: '',
       title: '',
       label: '',
-      assignee: '👤',
+      assignee: '',
       status: column,
       description: '',
       date: ''
     });
     setOpenDialog(true);
+  };
+
+  const handleOpenEdit = (task: Task) => {
+    setEditTask({ ...task });
+    setEditOpen(true);
+  };
+
+  const handleEditField = (key: keyof Task, value: any) => {
+    setEditTask(prev => (prev ? { ...prev, [key]: value } : prev));
+  };
+
+  const handleEditSave = async () => {
+    if (!editTask) return;
+    try {
+      const payload = {
+        title: editTask.title,
+        label: editTask.label,
+        assigned_to: editTask.assignee,  // NAME
+        description: editTask.description,
+        due_date: editTask.date,
+        status: editTask.status
+      };
+
+      await fetch(`${API_BASE}/task/${editTask.id}/update`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      setTasks(prev => prev.map(t => (t.id === editTask.id ? { ...editTask } as Task : t)));
+      setEditOpen(false);
+    } catch (err) {
+      console.error("Failed to update task:", err);
+      alert("Failed to update task.");
+    }
   };
 
   return (
@@ -414,7 +528,7 @@ export default function MainGrid() {
                   <DroppableColumn id={column}>
                     <SortableContext items={filtered.map((task) => task.id)} strategy={verticalListSortingStrategy}>
                       {filtered.map((task) => (
-                        <SortableTask key={task.id} task={task} />
+                        <SortableTask key={task.id} task={task} onOpen={handleOpenEdit} />
                       ))}
                     </SortableContext>
                   </DroppableColumn>
@@ -469,12 +583,10 @@ export default function MainGrid() {
               <Typography variant="subtitle2" mb={0.5} color="text.secondary">
                 Assignee
               </Typography>
-              <TextField
-                fullWidth
+              <AssigneeSelect
                 value={newTask.assignee}
-                onChange={(e) => setNewTask({ ...newTask, assignee: e.target.value })}
-                variant="outlined"
-                size="small"
+                onChange={(v) => setNewTask({ ...newTask, assignee: v })}
+                team={team}
               />
             </Box>
 
@@ -535,6 +647,107 @@ export default function MainGrid() {
         <DialogActions>
           <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
           <Button variant="contained" onClick={handleAddTask}>Add</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={editOpen} onClose={() => setEditOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>View / Edit Task</DialogTitle>
+        <DialogContent sx={{ minWidth: 340, width: '100%' }}>
+          <Stack spacing={3} sx={{ mt: 1 }}>
+            <Box>
+              <Typography variant="subtitle2" mb={0.5} color="text.secondary">
+                Title
+              </Typography>
+              <TextField
+                fullWidth
+                multiline
+                value={editTask?.title || ''}
+                onChange={(e) => handleEditField('title', e.target.value)}
+                variant="outlined"
+                size="small"
+              />
+            </Box>
+
+            <Box>
+              <Typography variant="subtitle2" mb={0.5} color="text.secondary">
+                Label
+              </Typography>
+              <Select
+                fullWidth
+                value={editTask?.label || 'Bug Fix'}
+                onChange={(e) => handleEditField('label', e.target.value)}
+                size="small"
+              >
+                {labels.filter((l) => l !== 'All').map((label) => (
+                  <MenuItem key={label} value={label}>
+                    {label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </Box>
+
+            <Box>
+              <Typography variant="subtitle2" mb={0.5} color="text.secondary">
+                Assignee
+              </Typography>
+              <AssigneeSelect
+                value={editTask?.assignee || ''}
+                onChange={(v) => handleEditField('assignee', v)}
+                team={team}
+              />
+            </Box>
+
+            <Box>
+              <Typography variant="subtitle2" mb={0.5} color="text.secondary">
+                Description
+              </Typography>
+              <TextField
+                fullWidth
+                multiline
+                minRows={4}
+                value={editTask?.description || ''}
+                onChange={(e) => handleEditField('description', e.target.value)}
+                variant="outlined"
+                size="small"
+              />
+            </Box>
+
+            <Box>
+              <Typography variant="subtitle2" mb={0.5} color="text.secondary">
+                Status
+              </Typography>
+              <Select
+                fullWidth
+                value={editTask?.status || 'To-Do'}
+                onChange={(e) => handleEditField('status', e.target.value as Task['status'])}
+                size="small"
+              >
+                {columns.map((c) => (
+                  <MenuItem key={c} value={c}>
+                    {c}
+                  </MenuItem>
+                ))}
+              </Select>
+            </Box>
+
+            <Box>
+              <Typography variant="subtitle2" mb={0.5} color="text.secondary">
+                Date
+              </Typography>
+              <TextField
+                type="date"
+                fullWidth
+                value={editTask?.date || ''}
+                onChange={(e) => handleEditField('date', e.target.value)}
+                variant="outlined"
+                size="small"
+              />
+            </Box>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditOpen(false)}>Close</Button>
+          <Button variant="contained" onClick={handleEditSave}>Save</Button>
         </DialogActions>
       </Dialog>
     </Box>
