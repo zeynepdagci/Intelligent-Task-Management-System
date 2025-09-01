@@ -182,8 +182,8 @@ function AssigneeSelect({
   onChange,
   team,
 }: {
-  value: string;                    // assignee NAME
-  onChange: (v: string) => void;    // returns NAME
+  value: string;
+  onChange: (v: string) => void;
   team: TeamMember[];
   placeholder?: string;
 }) {
@@ -587,6 +587,9 @@ export default function MainGrid() {
                 value={newTask.assignee}
                 onChange={(v) => setNewTask({ ...newTask, assignee: v })}
                 team={team}
+                placeholder={
+                  teamLoading ? "Loading team..." : teamError ? "Failed to load team" : "Unassigned"
+                }
               />
             </Box>
 
@@ -694,6 +697,9 @@ export default function MainGrid() {
                 value={editTask?.assignee || ''}
                 onChange={(v) => handleEditField('assignee', v)}
                 team={team}
+                placeholder={
+                  teamLoading ? "Loading team..." : teamError ? "Failed to load team" : "Unassigned"
+                }
               />
             </Box>
 
