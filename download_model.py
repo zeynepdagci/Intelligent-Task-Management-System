@@ -1,6 +1,6 @@
 from transformers import DistilBertTokenizer, DistilBertForSequenceClassification
 
-model_dir = "backend/models/distilbert_pytorch"
+model_dir = "backend/models/distilbert_pytorch_v2"
 
 tokenizer = DistilBertTokenizer.from_pretrained("distilbert-base-uncased")
 model = DistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased", num_labels=3)

@@ -38,7 +38,7 @@ USE_CACHE = "cached" in CONFIG_TYPE
 BACKEND = "onnx" if USE_ONNX_CLS else "pytorch"
 
 # S3 location to be used only when needed
-MODEL_DIR = os.environ.get("MODEL_DIR", "/tmp/distilbert_pytorch")
+MODEL_DIR = os.environ.get("MODEL_DIR", "/tmp/distilbert_pytorch_v2")
 MODEL_BUCKET = os.environ.get("MODEL_BUCKET")  # In S3, zeynep-distilbert-models
 MODEL_KEY_PREFIX = os.environ.get("MODEL_KEY_PREFIX")  #  models/distilbert_pytorch
 
@@ -194,6 +194,7 @@ def classify_task(request: TaskRequest):
         "cached": False,
         "model": result["model"],
         "updated_at": result["updated_at"],
+        "version": MODEL_DIR
     }
     
 @app.post("/assign")
@@ -215,7 +216,7 @@ def assign_task(request: TaskRequest):
                 "updated_at": a["updated_at"]
             }
 
-    # in the case of "miss", it will be computer via PyTorch or ONNX embeddings depending on CONFIG_TYPE
+    # in the case of "miss", it will be computed via PyTorch or ONNX embeddings depending on CONFIG_TYPE
     assignee = find_best_assignee(request.description)  # returns {assigned_to, similarity}
     
     res = {

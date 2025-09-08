@@ -62,11 +62,8 @@ type Task = {
 };
 
 type TeamMember = {
-  member_id: string;
-  name: string;      // we show/use this in dropdowns and payloads
   email?: string;
-  role?: string;
-  avatar_url?: string;
+  name: string;
 };
 
 function SortableTask({ task, onOpen }: { task: Task; onOpen?: (t: Task) => void }) {
@@ -197,7 +194,7 @@ function AssigneeSelect({
       renderValue={(selected) => (selected as string)}
     >
       {team.map((m) => (
-        <MenuItem key={m.member_id} value={m.name}>
+        <MenuItem key={m.email} value={m.name}>
           {m.name}
         </MenuItem>
       ))}
@@ -297,11 +294,8 @@ export default function MainGrid() {
         const data = await res.json();
 
         const members: TeamMember[] = (data.members ?? data ?? []).map((m: any) => ({
-          member_id: m.member_id ?? m.id ?? String(m.name || m.email),
-          name: m.name ?? m.full_name ?? m.email ?? 'Unknown',
           email: m.email,
-          role: m.role,
-          avatar_url: m.avatar_url,
+          name: m.name ?? 'Unknown',
         }));
 
         if (!ignore) setTeam(members);

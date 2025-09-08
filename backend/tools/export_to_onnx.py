@@ -2,8 +2,8 @@ import os, torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from onnxruntime.quantization import quantize_dynamic, QuantType
 
-PT_DIR = os.environ.get("PT_DIR", "backend/models/distilbert_pytorch")
-OUT_DIR = os.environ.get("OUT_DIR", "backend/models/distilbert_onnx_classifier")
+PT_DIR = os.environ.get("PT_DIR", "backend/models/distilbert_pytorch_v2")
+OUT_DIR = os.environ.get("OUT_DIR", "backend/models/distilbert_onnx_classifier_v2")
 os.makedirs(OUT_DIR, exist_ok=True)
 
 print(f"Loading classifier from: {PT_DIR}")

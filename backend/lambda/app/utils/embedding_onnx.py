@@ -4,7 +4,7 @@ import onnxruntime as ort
 import boto3
 from transformers import DistilBertTokenizerFast
 
-ONNX_DIR   = os.environ.get("ONNX_EMB_DIR", "/tmp/distilbert_onnx_encoder")
+ONNX_DIR   = os.environ.get("ONNX_EMB_DIR", "/tmp/distilbert_onnx_encoder_v2")
 ONNX_NAME  = os.environ.get("ONNX_EMB_NAME", "distilbert-base-int8.onnx")
 
 S3_BUCKET      = os.environ.get("ONNX_EMB_BUCKET")
