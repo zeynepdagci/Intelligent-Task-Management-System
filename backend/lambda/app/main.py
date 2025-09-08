@@ -40,7 +40,7 @@ BACKEND = "onnx" if USE_ONNX_CLS else "pytorch"
 # S3 location to be used only when needed
 MODEL_DIR = os.environ.get("MODEL_DIR", "/tmp/distilbert_pytorch_v2")
 MODEL_BUCKET = os.environ.get("MODEL_BUCKET")  # In S3, zeynep-distilbert-models
-MODEL_KEY_PREFIX = os.environ.get("MODEL_KEY_PREFIX")  #  models/distilbert_pytorch
+MODEL_KEY_PREFIX = os.environ.get("MODEL_KEY_PREFIX")  #  models/distilbert_pytorch_v2
 
 os.environ.setdefault("HF_HOME", "/tmp/hf")
 os.environ.setdefault("TRANSFORMERS_CACHE", "/tmp/hf")

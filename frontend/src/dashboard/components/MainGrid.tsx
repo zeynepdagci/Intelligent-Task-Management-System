@@ -55,10 +55,10 @@ type Task = {
   id: string;
   title: string;
   label: string;
-  assignee: string; // stores assignee NAME (from DB)
+  assignee: string;
   status: (typeof columns)[number];
   description: string;
-  date: string; // yyyy-mm-dd
+  date: string;
 };
 
 type TeamMember = {
@@ -313,7 +313,7 @@ export default function MainGrid() {
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: { distance: 8 } // 8px before drag starts
+      activationConstraint: { distance: 8 }
     })
   );
 
@@ -438,7 +438,7 @@ export default function MainGrid() {
       const payload = {
         title: editTask.title,
         label: editTask.label,
-        assigned_to: editTask.assignee,  // NAME
+        assigned_to: editTask.assignee,
         description: editTask.description,
         due_date: editTask.date,
         status: editTask.status
@@ -461,7 +461,7 @@ export default function MainGrid() {
   return (
     <Box sx={{ px: 4, py: 2, width: '100%' }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h4">Studio Board</Typography>
+        <Typography variant="h4">Kanban Board</Typography>
         <FormControl
           variant="outlined"
           size="small"

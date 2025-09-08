@@ -4,11 +4,8 @@ import type { GridColDef } from '@mui/x-data-grid';
 import { Box, CssBaseline, Stack, TextField, Typography } from '@mui/material';
 import AppTheme from '../shared-theme/AppTheme';
 import SideMenu from '../dashboard/components/SideMenu';
-import AppNavbar from '../dashboard/components/AppNavbar';
 import {
-  chartsCustomizations,
   dataGridCustomizations,
-  datePickersCustomizations,
   treeViewCustomizations,
 } from '../dashboard/theme/customizations';
 import IconButton from '@mui/material/IconButton';
@@ -17,13 +14,11 @@ import EditIcon from '@mui/icons-material/Edit'
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button
 } from '@mui/material';
+import Chip from '@mui/material/Chip';
 import { API_BASE } from "../lib/api";
 
-
 const xThemeComponents = {
-  ...chartsCustomizations,
   ...dataGridCustomizations,
-  ...datePickersCustomizations,
   ...treeViewCustomizations,
 };
 
@@ -54,7 +49,27 @@ export default function TeamInformation(props: { disableCustomTheme?: boolean })
       headerName: 'Skills',
       flex: 2,
       minWidth: 250,
-      renderCell: (params) => params.value.join(', '),
+      renderCell: (params) => (
+        <Box
+          className="MuiDataGrid-scrollbar MuiDataGrid-scrollbar--horizontal"
+          tabIndex={-1}
+          onMouseDown={(e) => e.stopPropagation()}
+          sx={{
+            width: 1,
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            scrollbarWidth: 'thin',
+            py: 0.5,
+            px: 1
+          }}
+        >
+          <Stack direction="row" spacing={1} sx={{ pr: 2, width: 'max-content' }}>
+            {(params.value as string[]).map((s, i) => (
+              <Chip key={i} label={s} size="small" sx={{ whiteSpace: 'nowrap' }} />
+            ))}
+          </Stack>
+        </Box>
+      ),
     },
     {
       field: 'actions',
@@ -132,9 +147,9 @@ export default function TeamInformation(props: { disableCustomTheme?: boolean })
         body: JSON.stringify(newMember),
       });
 
-      await loadTeamMembers(); // Re-fetch from DynamoDB after adding
+      await loadTeamMembers(); // Team members are re-fetched from DynamoDB after adding
 
-      // Clear form
+      // Form is cleared
       setName('');
       setEmail('');
       setRole('');
@@ -190,7 +205,6 @@ export default function TeamInformation(props: { disableCustomTheme?: boolean })
       <CssBaseline enableColorScheme />
       <Box sx={{ display: 'flex' }}>
         <SideMenu />
-        <AppNavbar />
         <Box
           component="main"
           sx={{
@@ -220,7 +234,7 @@ export default function TeamInformation(props: { disableCustomTheme?: boolean })
               <TextField label="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
               <TextField label="Role" value={role} onChange={(e) => setRole(e.target.value)} />
               <TextField label="Skills (comma-separated)" value={skills} onChange={(e) => setSkills(e.target.value)} />
-              <button onClick={handleSubmit}>Add</button>
+              <Button variant="outlined" onClick={handleSubmit}>Add</Button>
             </Stack>
 
             <DataGrid

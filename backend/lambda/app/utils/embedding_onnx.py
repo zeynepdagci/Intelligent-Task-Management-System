@@ -25,7 +25,7 @@ def _s3_download_dir(bucket: str, prefix: str, local_dir: str):
     for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
         for obj in page.get("Contents", []):
             key = obj["Key"]
-            rel = key[len(prefix):].lstrip("/")  # strip common prefix
+            rel = key[len(prefix):].lstrip("/")  # Common prefix is stripped
             dest = os.path.join(local_dir, rel)
             _ensure_dir(os.path.dirname(dest))
             s3.download_file(bucket, key, dest)
@@ -59,7 +59,7 @@ _ensure_dir(ONNX_DIR)
 _ensure_dir(HF_HOME)
 _ensure_encoder_present()
 
-# load tokenizer and ONNX session
+# tokenizer and ONNX session is loaded
 _tok  = DistilBertTokenizerFast.from_pretrained(ONNX_DIR)
 _sess = ort.InferenceSession(os.path.join(ONNX_DIR, ONNX_NAME),
                              providers=["CPUExecutionProvider"])

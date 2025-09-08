@@ -7,18 +7,12 @@ import Stack from '@mui/material/Stack';
 import AnalyticsRoundedIcon from '@mui/icons-material/AnalyticsRounded';
 import PeopleRoundedIcon from '@mui/icons-material/PeopleRounded';
 import AssignmentRoundedIcon from '@mui/icons-material/AssignmentRounded';
-import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import { useNavigate } from 'react-router-dom';
 
 const mainListItems = [
   { text: 'Tasks', icon: <AssignmentRoundedIcon />, path: '/' },
   { text: 'Analytics', icon: <AnalyticsRoundedIcon />, path: '/analytics' },
   { text: 'Team', icon: <PeopleRoundedIcon />, path: '/team' }
-];
-
-
-const secondaryListItems = [
-  { text: 'Settings', icon: <SettingsRoundedIcon /> }
 ];
 
 export default function MenuContent() {
@@ -30,16 +24,6 @@ export default function MenuContent() {
         {mainListItems.map((item, index) => (
           <ListItem key={index} disablePadding sx={{ display: 'block' }}>
             <ListItemButton onClick={() => navigate(item.path)}>
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItemButton>
-          </ListItem>
-        ))}
-      </List>
-      <List dense>
-        {secondaryListItems.map((item, index) => (
-          <ListItem key={index} disablePadding sx={{ display: 'block' }}>
-            <ListItemButton>
               <ListItemIcon>{item.icon}</ListItemIcon>
               <ListItemText primary={item.text} />
             </ListItemButton>

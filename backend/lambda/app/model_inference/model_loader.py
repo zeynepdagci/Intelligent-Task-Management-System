@@ -9,11 +9,11 @@ def _s3_download_dir(bucket: str, prefix: str, local_dir: str):
     for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
         for obj in page.get("Contents", []):
             key = obj["Key"]
-            # Only process real files under the prefix
+            # Real files under the prefix are processed
             if not key.startswith(prefix):
                 continue
             rel = key[len(prefix):].lstrip("/")
-            # Skip "folder markers" and any keys that end with '/'
+            # "Folder markers" and any keys that end with '/' are skipped
             if not rel or rel.endswith("/"):
                 continue
             dest = os.path.join(local_dir, rel)
