@@ -16,6 +16,6 @@ __pycache__/
 
 # model files
 models/
-*.safetensors
-*.bin
-*.json
+models/*.safetensors
+models/*.bin
+models/*.json
