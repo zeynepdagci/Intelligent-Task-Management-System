@@ -628,7 +628,7 @@ export default function MainGrid() {
 
             <Box>
               <Typography variant="subtitle2" mb={0.5} color="text.secondary">
-                Date
+                Due Date
               </Typography>
               <TextField
                 type="date"
@@ -732,7 +732,7 @@ export default function MainGrid() {
 
             <Box>
               <Typography variant="subtitle2" mb={0.5} color="text.secondary">
-                Date
+                Due Date
               </Typography>
               <TextField
                 type="date"

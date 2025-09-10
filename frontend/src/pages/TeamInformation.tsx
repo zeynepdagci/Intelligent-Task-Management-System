@@ -1,34 +1,218 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Box, CssBaseline, Stack, TextField, Typography, IconButton, Button, Chip, Avatar, Divider, Snackbar, Alert,
+  Dialog, DialogTitle, DialogContent, DialogActions, InputAdornment,
+} from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import type { GridColDef } from '@mui/x-data-grid';
-import { Box, CssBaseline, Stack, TextField, Typography } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
+import EditIcon from '@mui/icons-material/Edit';
+import BadgeIcon from '@mui/icons-material/Badge';
+import WorkOutlineIcon from '@mui/icons-material/WorkOutline';
+import AddIcon from '@mui/icons-material/Add';
 import AppTheme from '../shared-theme/AppTheme';
 import SideMenu from '../dashboard/components/SideMenu';
 import {
   dataGridCustomizations,
   treeViewCustomizations,
 } from '../dashboard/theme/customizations';
-import IconButton from '@mui/material/IconButton';
-import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit'
-import {
-  Dialog, DialogTitle, DialogContent, DialogActions, Button
-} from '@mui/material';
-import Chip from '@mui/material/Chip';
-import { API_BASE } from "../lib/api";
+import { API_BASE } from '../lib/api';
 
 const xThemeComponents = {
   ...dataGridCustomizations,
   ...treeViewCustomizations,
 };
 
-type TeamMemberRow = {
+export type TeamMemberRow = {
   id: string;
   name: string;
   email: string;
   role: string;
   skills: string[];
 };
+
+const stringToInitials = (fullName: string) => {
+  if (!fullName) return '?';
+  const parts = fullName.trim().split(/\s+/);
+  const first = parts[0]?.[0] ?? '';
+  const last = parts[parts.length - 1]?.[0] ?? '';
+  return (first + last).toUpperCase();
+};
+
+function EditMemberDialog({
+  open,
+  member,
+  onClose,
+  onSave,
+}: {
+  open: boolean;
+  member: TeamMemberRow | null;
+  onClose: () => void;
+  onSave: (memberInfo: Omit<TeamMemberRow, 'id'>) => Promise<void> | void;
+}) {
+  const [local, setLocal] = useState<Omit<TeamMemberRow, 'id'>>({
+    name: '',
+    email: '',
+    role: '',
+    skills: [],
+  });
+  const [skillsInput, setSkillsInput] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (member) {
+      setLocal({ name: member.name, email: member.email, role: member.role, skills: member.skills || [] });
+    }
+    setSkillsInput('');
+    setError(null);
+  }, [member, open]);
+
+  const canSave = useMemo(() => {
+    return local.name.trim().length > 1 && local.role.trim().length > 0 && local.email.trim().length > 0;
+  }, [local]);
+
+  const addSkillFromInput = () => {
+    const parts = skillsInput
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+    if (!parts.length) return;
+    const merged = Array.from(new Set([...(local.skills || []), ...parts]));
+    setLocal((prev) => ({ ...prev, skills: merged }));
+    setSkillsInput('');
+  };
+
+  const removeSkill = (skill: string) => {
+    setLocal((prev) => ({ ...prev, skills: (prev.skills || []).filter((s) => s !== skill) }));
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addSkillFromInput();
+    }
+  };
+
+  const handleSave = async () => {
+    if (!canSave) return;
+    try {
+      setSaving(true);
+      await onSave(local);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to save changes');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      fullWidth
+      maxWidth="sm"
+      transitionDuration={{ enter: 140, exit: 100 }}
+    >
+      <DialogTitle sx={{
+        p: 2.5,
+        pb: 2,
+      }}>
+        <Stack direction="row" alignItems="center" spacing={2}>
+          <Avatar sx={{ width: 40, height: 40, fontWeight: 700 }}>
+            {stringToInitials(local.name)}
+          </Avatar>
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1 }}>
+              Edit Team Member
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {local.email}
+            </Typography>
+          </Box>
+        </Stack>
+      </DialogTitle>
+
+      <Divider />
+
+      <DialogContent sx={{ p: 2.5 }}>
+        <Stack spacing={2.25}>
+          <TextField
+            label="Full name"
+            value={local.name}
+            onChange={(e) => setLocal((p) => ({ ...p, name: e.target.value }))}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <BadgeIcon sx={{ mr: 1 }} />
+                  </InputAdornment>
+                ),
+              },
+            }} autoFocus
+          />
+          <TextField
+            label="Role"
+            value={local.role}
+            onChange={(e) => setLocal((p) => ({ ...p, role: e.target.value }))}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <WorkOutlineIcon sx={{ mr: 1 }} />
+                  </InputAdornment>
+                ),
+              },
+            }} autoFocus
+          />
+          <Box>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              Skills
+            </Typography>
+            <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ mb: 1 }}>
+              {(local.skills || []).map((skill) => (
+                <Chip key={skill} label={skill} onDelete={() => removeSkill(skill)} size="small" />
+              ))}
+              {!local.skills?.length && (
+                <Typography variant="body2" color="text.secondary">
+                  There are no skills listed yet
+                </Typography>
+              )}
+            </Stack>
+            <Stack direction="row" spacing={1}>
+              <TextField
+                fullWidth
+                placeholder="Type a skill and press enter"
+                value={skillsInput}
+                onChange={(e) => setSkillsInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+              />
+              <Button onClick={addSkillFromInput} variant="outlined" startIcon={<AddIcon />}>
+                Add
+              </Button>
+            </Stack>
+          </Box>
+        </Stack>
+      </DialogContent>
+
+      <Divider />
+
+      <DialogActions sx={{ p: 2, gap: 1 }}>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={handleSave} variant="contained" disabled={!canSave || saving}>
+          {saving ? 'Saving…' : 'Save changes'}
+        </Button>
+      </DialogActions>
+
+      <Snackbar open={!!error} autoHideDuration={4000} onClose={() => setError(null)}>
+        <Alert severity="error" variant="filled" onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      </Snackbar>
+    </Dialog>
+  );
+}
 
 export default function TeamInformation(props: { disableCustomTheme?: boolean }) {
   const [search, setSearch] = useState('');
@@ -39,33 +223,33 @@ export default function TeamInformation(props: { disableCustomTheme?: boolean })
   const [rows, setRows] = useState<TeamMemberRow[]>([]);
   const [editOpen, setEditOpen] = useState(false);
   const [editMember, setEditMember] = useState<TeamMemberRow | null>(null);
+  const [toast, setToast] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>(
+    { open: false, message: '', severity: 'success' }
+  );
+
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<TeamMemberRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
 
   const columns: GridColDef[] = [
     { field: 'name', headerName: 'Name', flex: 1, minWidth: 150 },
     { field: 'email', headerName: 'Email', flex: 1, minWidth: 180 },
-    { field: 'role', headerName: 'Role', flex: 1.5, minWidth: 200 },
+    { field: 'role', headerName: 'Role', flex: 1.25, minWidth: 160 },
     {
       field: 'skills',
       headerName: 'Skills',
       flex: 2,
-      minWidth: 250,
+      minWidth: 260,
       renderCell: (params) => (
         <Box
-          className="MuiDataGrid-scrollbar MuiDataGrid-scrollbar--horizontal"
           tabIndex={-1}
           onMouseDown={(e) => e.stopPropagation()}
-          sx={{
-            width: 1,
-            overflowX: 'auto',
-            overflowY: 'hidden',
-            scrollbarWidth: 'thin',
-            py: 0.5,
-            px: 1
-          }}
+          sx={{ width: 1, overflowX: 'auto', overflowY: 'hidden', scrollbarWidth: 'thin', py: 0.5, px: 1 }}
         >
           <Stack direction="row" spacing={1} sx={{ pr: 2, width: 'max-content' }}>
-            {(params.value as string[]).map((s, i) => (
-              <Chip key={i} label={s} size="small" sx={{ whiteSpace: 'nowrap' }} />
+            {(params.value as string[]).map((s: string, i: number) => (
+              <Chip key={`${s}-${i}`} label={s} size="small" sx={{ whiteSpace: 'nowrap' }} />
             ))}
           </Stack>
         </Box>
@@ -75,36 +259,42 @@ export default function TeamInformation(props: { disableCustomTheme?: boolean })
       field: 'actions',
       headerName: 'Actions',
       minWidth: 120,
+      sortable: false,
+      filterable: false,
       renderCell: (params) => (
-        <>
-          <IconButton onClick={() => handleEditOpen(params.row)} color="primary">
+        <Stack direction="row" spacing={0.5}>
+          <IconButton onClick={() => handleEditOpen(params.row)} color="primary" size="small" aria-label="Edit">
             <EditIcon />
           </IconButton>
-          <IconButton onClick={() => handleDelete(params.row.email)} color="error">
+          <IconButton
+            onClick={() => { setDeleteTarget(params.row); setDeleteOpen(true); }}
+            color="error"
+            size="small"
+            aria-label="Delete"
+          >
             <DeleteIcon />
           </IconButton>
-        </>
+        </Stack>
       ),
-    }
+    },
   ];
 
-  // Function to fetch data from FastAPI
   const loadTeamMembers = async () => {
     try {
       const res = await fetch(`${API_BASE}/team_members`);
       const data = await res.json();
-      const processed = data.map((item: any, index: number) => ({
+      const processed: TeamMemberRow[] = data.map((item: any, index: number) => ({
         ...item,
         id: (index + 1).toString(),
-        skills: item.skills.map((s: any) => (typeof s === 'string' ? s : s.S)),
+        skills: (item.skills || []).map((s: any) => (typeof s === 'string' ? s : s.S)),
       }));
       setRows(processed);
     } catch (err) {
-      console.error('Failed to fetch team members:', err);
+      console.error('Failed to load team members:', err);
+      setToast({ open: true, message: 'Failed to load team members', severity: 'error' });
     }
   };
 
-  // Load team members when page loads
   useEffect(() => {
     loadTeamMembers();
   }, []);
@@ -123,11 +313,11 @@ export default function TeamInformation(props: { disableCustomTheme?: boolean })
     const _emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!name || !email || !role || !skills) {
-      alert("Please fill in all fields.");
+      setToast({ open: true, message: 'Please fill in all fields.', severity: 'error' });
       return;
     }
     if (!_emailRegex.test(email)) {
-      alert("Please enter a valid email address.");
+      setToast({ open: true, message: 'Please enter a valid email address.', severity: 'error' });
       return;
     }
 
@@ -135,42 +325,45 @@ export default function TeamInformation(props: { disableCustomTheme?: boolean })
       name,
       email,
       role,
-      skills: skills.split(',').map(s => s.trim()),
+      skills: skills.split(',').map((s) => s.trim()).filter(Boolean),
     };
 
     try {
-      await fetch(`${API_BASE}/add_team_member`, {
+      const res = await fetch(`${API_BASE}/add_team_member`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newMember),
       });
 
-      await loadTeamMembers(); // Team members are re-fetched from DynamoDB after adding
+      if (!res.ok) throw new Error('Server error');
 
-      // Form is cleared
+      await loadTeamMembers();
       setName('');
       setEmail('');
       setRole('');
       setSkills('');
+      setToast({ open: true, message: 'Team member added', severity: 'success' });
     } catch (err) {
-      console.error('Error adding team member:', err);
-      alert('Failed to add team member');
+      console.error('Failed to add team member:', err);
+      setToast({ open: true, message: 'Failed to add team member', severity: 'error' });
     }
   };
 
-  const handleDelete = async (email: string) => {
-    if (!window.confirm("Are you sure you want to delete this team member?")) return;
-
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await fetch(`${API_BASE}/team_member/${email}`, {
-        method: 'DELETE',
-      });
+      setDeleting(true);
+      const res = await fetch(`${API_BASE}/team_member/${deleteTarget.email}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Server error');
+      setDeleteOpen(false);
+      setDeleteTarget(null);
       await loadTeamMembers();
+      setToast({ open: true, message: 'Team member removed', severity: 'success' });
     } catch (err) {
-      console.error("Failed to delete member:", err);
-      alert("Failed to delete team member.");
+      console.error('Failed to delete member:', err);
+      setToast({ open: true, message: 'Failed to delete team member', severity: 'error' });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -178,28 +371,28 @@ export default function TeamInformation(props: { disableCustomTheme?: boolean })
     setEditMember(member);
     setEditOpen(true);
   };
-
-  const handleEditSave = async () => {
-    if (!editMember) return;
+  const handleEditSave = async (memberInfo: Omit<TeamMemberRow, 'id'>) => {
     try {
-      await fetch(`${API_BASE}/team_member/${editMember.email}`, {
+      const res = await fetch(`${API_BASE}/team_member/${memberInfo.email}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: editMember.name,
-          email: editMember.email,
-          role: editMember.role,
-          skills: editMember.skills,
+          name: memberInfo.name,
+          email: memberInfo.email, // email is the partition key (immutable) and it is sent to find the team member with it
+          role: memberInfo.role,
+          skills: memberInfo.skills,
         }),
       });
+      if (!res.ok) throw new Error('Server error');
       setEditOpen(false);
+      setEditMember(null);
       await loadTeamMembers();
+      setToast({ open: true, message: 'Changes saved', severity: 'success' });
     } catch (err) {
-      console.error("Failed to update member:", err);
-      alert("Failed to update team member.");
+      console.error('Failed to update member:', err);
+      setToast({ open: true, message: 'Failed to update team member', severity: 'error' });
     }
   };
-
   return (
     <AppTheme {...props} themeComponents={xThemeComponents}>
       <CssBaseline enableColorScheme />
@@ -217,65 +410,72 @@ export default function TeamInformation(props: { disableCustomTheme?: boolean })
           }}
         >
           <Stack spacing={2} sx={{ mx: 3, pb: 5, mt: { xs: 8, md: 0 } }}>
-            <Typography variant="h4" sx={{ mt: 2 }}>
+            <Typography variant="h4" sx={{ mt: 2, fontWeight: 800 }}>
               Team Members
             </Typography>
-
-            <TextField
-              label="Search"
-              variant="outlined"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              sx={{ width: 300 }}
-            />
-
-            <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
-              <TextField label="Name" value={name} onChange={(e) => setName(e.target.value)} />
-              <TextField label="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-              <TextField label="Role" value={role} onChange={(e) => setRole(e.target.value)} />
-              <TextField label="Skills (comma-separated)" value={skills} onChange={(e) => setSkills(e.target.value)} />
-              <Button variant="outlined" onClick={handleSubmit}>Add</Button>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
+              <TextField label="Search" variant="outlined" value={search} onChange={(e) => setSearch(e.target.value)} sx={{ width: { xs: 1, sm: 300 } }} />
             </Stack>
-
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ xs: 'stretch', md: 'center' }}>
+              <TextField label="Name" value={name} onChange={(e) => setName(e.target.value)} sx={{ flex: 1 }} />
+              <TextField label="Email" value={email} onChange={(e) => setEmail(e.target.value)} sx={{ flex: 1 }} />
+              <TextField label="Role" value={role} onChange={(e) => setRole(e.target.value)} sx={{ flex: 1 }} />
+              <TextField label="Skills (comma-separated)" value={skills} onChange={(e) => setSkills(e.target.value)} sx={{ flex: 2 }} />
+              <Button variant="contained" onClick={handleSubmit} startIcon={<AddIcon />}>Add</Button>
+            </Stack>
             <DataGrid
               rows={filteredRows}
               columns={columns}
               disableRowSelectionOnClick
             />
-            <Dialog open={editOpen} onClose={() => setEditOpen(false)}>
-              <DialogTitle>Edit Team Member</DialogTitle>
-              <DialogContent>
-                <TextField
-                  margin="dense"
-                  label="Name"
-                  fullWidth
-                  value={editMember?.name || ''}
-                  onChange={(e) => setEditMember(prev => prev && { ...prev, name: e.target.value })}
-                />
-                <TextField
-                  margin="dense"
-                  label="Role"
-                  fullWidth
-                  value={editMember?.role || ''}
-                  onChange={(e) => setEditMember(prev => prev && { ...prev, role: e.target.value })}
-                />
-                <TextField
-                  margin="dense"
-                  label="Skills (comma-separated)"
-                  fullWidth
-                  value={editMember?.skills.join(', ') || ''}
-                  onChange={(e) =>
-                    setEditMember(prev =>
-                      prev && { ...prev, skills: e.target.value.split(',').map(s => s.trim()) }
-                    )
-                  }
-                />
+            <EditMemberDialog
+              open={editOpen}
+              member={editMember}
+              onClose={() => setEditOpen(false)}
+              onSave={handleEditSave}
+            />
+            <Dialog
+              open={deleteOpen}
+              onClose={() => setDeleteOpen(false)}
+              fullWidth
+              maxWidth="xs"
+              transitionDuration={{ enter: 140, exit: 100 }}
+            >
+              <DialogTitle
+                sx={{
+                  display: 'flex', alignItems: 'center', gap: 1.25, p: 2.25,
+                }}
+              >
+                <DeleteForeverIcon color="error" />
+                <Typography variant="h6" sx={{ fontWeight: 800 }}>Are you sure?</Typography>
+              </DialogTitle>
+              <DialogContent sx={{ pt: 2 }}>
+                <Typography sx={{ mb: 1 }}>
+                  This will permanently remove <b>{deleteTarget?.name}</b> (<i>{deleteTarget?.email}</i>).
+                </Typography>
               </DialogContent>
-              <DialogActions>
-                <Button onClick={() => setEditOpen(false)}>Cancel</Button>
-                <Button variant="contained" onClick={handleEditSave}>Save</Button>
+              <DialogActions sx={{ p: 2, gap: 1 }}>
+                <Button onClick={() => setDeleteOpen(false)} variant="outlined">Cancel</Button>
+                <Button onClick={confirmDelete} color="error" variant="contained" disabled={deleting}>
+                  {deleting ? 'Deleting' : 'Delete'}
+                </Button>
               </DialogActions>
             </Dialog>
+            <Snackbar
+              open={toast.open}
+              autoHideDuration={2500}
+              onClose={() => setToast((t) => ({ ...t, open: false }))}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+              <Alert
+                onClose={() => setToast((t) => ({ ...t, open: false }))}
+                severity={toast.severity}
+                variant="filled"
+                sx={{ width: '100%' }}
+              >
+                {toast.message}
+              </Alert>
+            </Snackbar>
           </Stack>
         </Box>
       </Box>
