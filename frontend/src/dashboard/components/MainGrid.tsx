@@ -21,6 +21,7 @@ import { useEffect, useRef } from 'react';
 import { Chip } from '@mui/material';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import { API_BASE } from "../../lib/api";
+import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 
 const getLabelIcon = (label: string): React.ReactElement | undefined => {
   switch (label) {
@@ -408,6 +409,32 @@ export default function MainGrid() {
     }
   };
 
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const openDeleteConfirm = () => setDeleteOpen(true);
+
+  const confirmDeleteTask = async () => {
+    if (!editTask?.id) return;
+    try {
+      setDeleting(true);
+      const resp = await fetch(`${API_BASE}/task/${editTask.id}`, { method: "DELETE" });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.detail || "Failed to delete task");
+      }
+      setTasks(prev => prev.filter(t => t.id !== editTask.id));
+      setDeleteOpen(false);
+      setEditOpen(false);
+      setEditTask(null);
+    } catch (e) {
+      console.error(e);
+      alert("Could not delete task");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const activeTask = tasks.find((t) => t.id === activeId);
 
   const handleOpenDialog = (column: Task['status']) => {
@@ -518,7 +545,6 @@ export default function MainGrid() {
                       </IconButton>
                     </Tooltip>
                   </Box>
-
                   <DroppableColumn id={column}>
                     <SortableContext items={filtered.map((task) => task.id)} strategy={verticalListSortingStrategy}>
                       {filtered.map((task) => (
@@ -743,6 +769,18 @@ export default function MainGrid() {
                 size="small"
               />
             </Box>
+            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+              <Button
+                onClick={openDeleteConfirm}
+                color="error"
+                variant="contained"
+                startIcon={<DeleteForeverIcon />}
+                disabled={!editTask?.id}
+              >
+                Delete Task
+              </Button>
+            </Box>
+
           </Stack>
         </DialogContent>
         <DialogActions>
@@ -750,6 +788,42 @@ export default function MainGrid() {
           <Button variant="contained" onClick={handleEditSave}>Save</Button>
         </DialogActions>
       </Dialog>
+
+      <Dialog
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        fullWidth
+        maxWidth="xs"
+        transitionDuration={{ enter: 140, exit: 100 }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.25, p: 2.25 }}>
+          <DeleteForeverIcon color="error" />
+          <Typography variant="h6" component="span" sx={{ fontWeight: 800 }}>
+            Are you sure?
+          </Typography>
+        </DialogTitle>
+
+        <DialogContent sx={{ pt: 2 }}>
+          <Typography sx={{ mb: 1 }}>
+            This will permanently delete <b>{editTask?.title}</b>.
+          </Typography>
+        </DialogContent>
+
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button onClick={() => setDeleteOpen(false)} variant="outlined">
+            Cancel
+          </Button>
+          <Button
+            onClick={confirmDeleteTask}
+            color="error"
+            variant="contained"
+            disabled={deleting}
+          >
+            {deleting ? 'Deleting' : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
     </Box>
   );
 }
