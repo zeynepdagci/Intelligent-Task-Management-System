@@ -13,14 +13,14 @@ model.eval()
 
 dummy = tok("hello world", return_tensors="pt", padding="max_length", truncation=True, max_length=128)
 
-onnx_fp = os.path.join(OUT_DIR, "model.onnx")
-q_fp    = os.path.join(OUT_DIR, "model-quantized.onnx")
+onnx_path = os.path.join(OUT_DIR, "model.onnx")
+quantized_path    = os.path.join(OUT_DIR, "model-quantized.onnx")
 
 with torch.no_grad():
     torch.onnx.export(
         model,
         (dummy["input_ids"], dummy["attention_mask"]),
-        onnx_fp,
+        onnx_path,
         input_names=["input_ids", "attention_mask"],
         output_names=["logits"],
         dynamic_axes={
@@ -31,7 +31,7 @@ with torch.no_grad():
         opset_version=14,
     )
 
-quantize_dynamic(onnx_fp, q_fp, weight_type=QuantType.QInt8, reduce_range=True, per_channel=False)
+quantize_dynamic(onnx_path, quantized_path, weight_type=QuantType.QInt8)
 
 tok.save_pretrained(OUT_DIR)
 print("Classifier ONNX ready at:", OUT_DIR)

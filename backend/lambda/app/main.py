@@ -9,12 +9,21 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from app.utils.dynamodb import (
     add_team_member, get_all_team_members, delete_team_member, update_team_member,
-    create_task, get_all_tasks, update_task_status, update_task_db)
+    create_task, get_all_tasks, update_task_status, update_task_db, delete_the_task)
 from app.utils.matching_assignee import find_best_assignee
 import logging, time
 from app.utils.cache import make_cache_key, get_item, update_classify, update_assign
 
-logging.basicConfig(level=logging.INFO)  # to see the logs on CloudWatch
+# Logging in CloudWatch
+import logging
+
+root = logging.getLogger()
+root.setLevel(logging.INFO)
+for h in root.handlers:
+    h.setLevel(logging.INFO)
+
+logger = logging.getLogger(__name__)
+logger.propagate = True
 
 app = FastAPI()
 app.router.redirect_slashes = False
@@ -62,14 +71,13 @@ if USE_ONNX_CLS:
     )
     tokenizer = DistilBertTokenizerFast.from_pretrained(MODEL_DIR)
     ort_sess = ort.InferenceSession(onnx_path, providers=["CPUExecutionProvider"])
-    logging.info("ONNX classifier loaded | dir=%s | onnx=%s", MODEL_DIR, onnx_path)
 
     def infer_logits(text: str):
         import numpy as np
         enc = tokenizer(text, return_tensors="np", truncation=True, padding=True)
         inputs = {"input_ids": enc["input_ids"], "attention_mask": enc["attention_mask"]}
         (logits,) = ort_sess.run(["logits"], inputs)
-        return logits  # numpy (1, num_labels)
+        return logits
 else:
     # PyTorch (baseline/cached) branch
     from app.model_inference.model_loader import get_or_download_torch_model as get_torch_classifier
@@ -80,12 +88,11 @@ else:
         key_prefix=MODEL_KEY_PREFIX,
     )
     model.eval()
-    logging.info("PyTorch classifier is loaded | MODEL_DIR=%s", MODEL_DIR)
 
     def infer_logits(text: str):
         with torch.no_grad():
             enc = tokenizer(text, return_tensors="pt", truncation=True, padding=True)
-            return model(**enc).logits.cpu().numpy()  # numpy (1, num_labels)
+            return model(**enc).logits.cpu().numpy()
 
 # Pydantic models & routes
 class TaskRequest(BaseModel):
@@ -150,30 +157,28 @@ def update_member(email: str, member: TeamMember):
 
 @app.post("/classify")
 def classify_task(request: TaskRequest):
-    logging.info("Handling /classify with BACKEND=%s", BACKEND)
+    print("ENTER /classify")
+    logger.info("Handling /classify with BACKEND=%s", BACKEND)
+
     if not request.description:
         raise HTTPException(status_code=400, detail="Task description cannot be empty.")
 
-    cache_key = make_cache_key(CONFIG_TYPE, request.description)
     if USE_CACHE:
+        cache_key = make_cache_key(CONFIG_TYPE, request.description)
         item  = get_item(cache_key)
         if item  and "classify" in item :
             c = item ["classify"]
-            try:
-                label_index = LABELS.index(c["label"])
-            except ValueError:
-                label_index = None
             return {
-                "label_index": label_index,
                 "label": c["label"],
-                "confidence": c["confidence"],
+                "updated_at": c["updated_at"],
                 "cached": True,
-                "model": c["model"],
-                "updated_at": c["updated_at"]
+                "inference_ms": 0.0,
             }
         
     import numpy as np
-    logits = infer_logits(request.description) # numpy (1, num_labels)
+    t0 = time.perf_counter()
+    logits = infer_logits(request.description)
+    inf_ms = (time.perf_counter() - t0) * 1000.0
     probs = (np.exp(logits) / np.exp(logits).sum(axis=1, keepdims=True))[0]
     idx = int(probs.argmax())
     conf = float(probs[idx])
@@ -183,64 +188,83 @@ def classify_task(request: TaskRequest):
         "model": BACKEND,
         "updated_at": datetime.now(timezone.utc).isoformat()
         }
-    
-    if USE_CACHE:
-        update_classify(cache_key, request.description[:120], result)
-    
+
     return {
-        "label_index": idx,
         "label": result["label"],
         "confidence": result["confidence"],
         "cached": False,
         "model": result["model"],
         "updated_at": result["updated_at"],
-        "version": MODEL_DIR
+        "version": MODEL_DIR,
+        "inference_ms": float(inf_ms)
     }
     
 @app.post("/assign")
 def assign_task(request: TaskRequest):
-    logging.info("Handling /assign with BACKEND=%s", BACKEND)
+    print("ENTER /assign")
+    logger.info("Handling /assign with BACKEND=%s", BACKEND)
+
     if not request.description:
         raise HTTPException(status_code=400, detail="Task description is required.")
     
-    cache_key = make_cache_key(CONFIG_TYPE, request.description)
     if USE_CACHE:
+        cache_key = make_cache_key(CONFIG_TYPE, request.description)
         item = get_item(cache_key)
         if item and "assign" in item:
             a = item["assign"]
             return {
                 "assigned_to": a["assigned_to"],
-                "similarity": a["similarity"],
+                "updated_at": a["updated_at"],
                 "cached": True,
-                "model": a["model"],
-                "updated_at": a["updated_at"]
+                "inference_ms": 0.0,
             }
 
     # in the case of "miss", it will be computed via PyTorch or ONNX embeddings depending on CONFIG_TYPE
     assignee = find_best_assignee(request.description)  # returns {assigned_to, similarity}
     
-    res = {
+    result = {
         "assigned_to": assignee["assigned_to"],
         "similarity": str(assignee["similarity"]),
         "model": BACKEND,
-        "updated_at": datetime.now(timezone.utc).isoformat()
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "inference_ms": assignee["inference_ms"]
     }
 
-    if USE_CACHE:
-        update_assign(cache_key, request.description[:120], res)
-
     return {
-        "assigned_to": res["assigned_to"],
-        "similarity": res["similarity"],
+        "assigned_to": result["assigned_to"],
+        "similarity": result["similarity"],
         "cached": False,
-        "model": res["model"],
-        "updated_at": res["updated_at"],
+        "model": result["model"],
+        "updated_at": result["updated_at"],
+        "version": MODEL_DIR,
+        "inference_ms": result["inference_ms"]
     }
 
 @app.post("/tasks")
 def api_create_task(task: dict):
     try:
         new_task = create_task(task)
+        desc = new_task.get("description")
+        if USE_CACHE and desc:
+            cache_key = make_cache_key(CONFIG_TYPE, desc)
+            now = datetime.now(timezone.utc).isoformat()
+
+            update_classify(
+                cache_key,
+                desc[:120],
+                {
+                    "label": new_task.get("label"),
+                    "updated_at": now,
+                },
+            )
+            update_assign(
+                cache_key,
+                desc[:120],
+                {
+                    "assigned_to": new_task.get("assigned_to"),
+                    "updated_at": now,
+                },
+            )
         return JSONResponse(content=jsonable_encoder({"message": "Task created", "task": new_task}))
     except Exception as e:
         import traceback; traceback.print_exc()
@@ -276,6 +300,14 @@ def update_task_details(task_id: str, taskUpdate: TaskUpdate):
             status=taskUpdate.status
         )
         return {"message": "Task updated successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@app.delete("/task/{task_id}")
+def delete_task(task_id: str):
+    try:
+        delete_the_task(task_id)
+        return {"message": "Task deleted successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     

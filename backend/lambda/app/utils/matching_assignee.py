@@ -1,6 +1,7 @@
 import os
 from scipy.spatial.distance import cosine
 from app.utils.dynamodb import get_all_team_members
+import time
 
 USE_ONNX_EMB = os.getenv("USE_ONNX_EMBEDDINGS", "false").lower() == "true"
 if USE_ONNX_EMB:
@@ -9,17 +10,19 @@ else:
     from app.utils.embedding import get_embedding
 
 def find_best_assignee(task_description: str):
-    task_vec = get_embedding(task_description)
+    t0 = time.perf_counter()
+    task_vector = get_embedding(task_description)
+    inference_ms = (time.perf_counter() - t0) * 1000.0
     best = None
     best_score = -1.0
 
     for member in get_all_team_members():
         skills = member.get("skills")
         skills_text = ", ".join(skills) if isinstance(skills, list) else str(skills)
-        skill_vec = get_embedding(skills_text)
-        sim = 1 - cosine(task_vec, skill_vec)
-        if sim > best_score:
-            best_score = sim
+        skill_vector = get_embedding(skills_text)
+        similarity_score = 1 - cosine(task_vector, skill_vector)
+        if similarity_score > best_score:
+            best_score = similarity_score
             best = member
 
-    return {"assigned_to": best["name"] if best else None, "similarity": float(best_score)}
+    return {"assigned_to": best["name"] if best else None, "similarity": float(best_score), "inference_ms": float(inference_ms)}

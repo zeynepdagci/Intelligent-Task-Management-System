@@ -66,7 +66,7 @@ def create_task(task_data: dict) -> dict:
         "description": task_data.get("description"),
         "due_date": task_data.get("due_date"),
         "created_at": created_at,
-        "status": task_data.get("status", "todo")
+        "status": task_data.get("status", "To-Do")
     }
 
     tasks_table.put_item(Item=item)
@@ -109,3 +109,7 @@ def update_task_db(task_id: str, title: str, label: str, assigned_to: str, descr
             ":status": status,
         },
     )
+
+def delete_the_task(task_id: str):
+    tasks_table.delete_item(Key={"task_id": task_id
+    })
