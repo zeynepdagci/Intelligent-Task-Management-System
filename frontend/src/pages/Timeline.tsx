@@ -83,7 +83,7 @@ function RowMeasure({
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const ROW_GAP = 20;
-const BAR_H = 50;
+const BAR_H = 60;
 
 const toUtcMidnight = (d: Date) =>
   new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -209,7 +209,7 @@ const GanttTimeline: React.FC<{ tasks: TimelineTask[]; rowHeights: Record<string
   const totalDays = timelineDays.length;
   const dayWidth = 20;
 
-  const monthSegs = useMemo(() => {
+  const monthSegments = useMemo(() => {
     const monthGroups: { label: string; days: number; startIndex: number }[] = [];
     if (!timelineDays.length) return monthGroups;
     let runMonth = timelineDays[0].getUTCMonth();
@@ -272,39 +272,21 @@ const GanttTimeline: React.FC<{ tasks: TimelineTask[]; rowHeights: Record<string
         opacity: 1,
       })}>
         <Box sx={{ display: 'flex', borderBottom: 1, borderColor: 'divider' }}>
-          {(() => {
-            const monthGroups: { label: string; days: number }[] = [];
-            if (timelineDays.length) {
-              let runMonth = timelineDays[0].getUTCMonth();
-              let runYear = timelineDays[0].getUTCFullYear();
-              let count = 0;
-              for (const d of timelineDays) {
-                const m = d.getUTCMonth(), y = d.getUTCFullYear();
-                if (m !== runMonth || y !== runYear) {
-                  monthGroups.push({
-                    label: new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' })
-                      .format(new Date(Date.UTC(runYear, runMonth, 1))),
-                    days: count,
-                  });
-                  runMonth = m; runYear = y; count = 1;
-                } else {
-                  count++;
-                }
-              }
-              monthGroups.push({
-                label: new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' })
-                  .format(new Date(Date.UTC(runYear, runMonth, 1))),
-                days: count,
-              });
-            }
-            return monthGroups.map((seg, i) => (
-              <Box key={i} sx={{ width: seg.days * dayWidth, textAlign: 'center', px: 0.5, py: 0.5 }}>
-                <Typography variant="caption" noWrap>
-                  {seg.label}
-                </Typography>
-              </Box>
-            ));
-          })()}
+          {monthSegments.map((segment, i) => (
+            <Box
+              key={i}
+              sx={{
+                width: segment.days * dayWidth,
+                textAlign: 'center',
+                px: 0.5,
+                py: 0.5
+              }}
+            >
+              <Typography variant="caption" noWrap>
+                {segment.label}
+              </Typography>
+            </Box>
+          ))}
         </Box>
 
         <Box sx={{ display: 'flex', borderBottom: 1, borderColor: 'divider' }}>
@@ -327,21 +309,21 @@ const GanttTimeline: React.FC<{ tasks: TimelineTask[]; rowHeights: Record<string
         </Box>
       </Box>
 
-      <Box sx={{ position: 'relative', minHeight: totalHeight }}>
-        {monthSegs.map((seg, i) => (
+      <Box sx={{ position: 'relative', minHeight: totalHeight, marginTop: -3 }}>
+        {monthSegments.map((segment, i) => (
           <Box key={`m-bg-${i}`} sx={{
             position: 'absolute',
-            left: seg.startIndex * dayWidth, top: 0, bottom: 0,
-            width: seg.days * dayWidth,
+            left: segment.startIndex * dayWidth, top: 0, bottom: 0,
+            width: segment.days * dayWidth,
             bgcolor: i % 2 === 0 ? zebra : 'transparent',
             pointerEvents: 'none', zIndex: 0,
           }} />
         ))}
 
-        {monthSegs.map((seg, i) => (
+        {monthSegments.map((segment, i) => (
           <Box key={`m-line-${i}`} sx={{
             position: 'absolute',
-            left: seg.startIndex * dayWidth, top: 0, bottom: 0,
+            left: segment.startIndex * dayWidth, top: 0, bottom: 0,
             borderLeft: `1px solid ${monthLine}`,
             pointerEvents: 'none', zIndex: 1,
           }} />
@@ -467,7 +449,7 @@ export default function Timeline(props: { disableCustomTheme?: boolean }) {
               }}
             >
               <Box sx={{ display: 'flex', flexDirection: 'column', pt: 3, pl: 2 }}>
-                <Typography variant="h6" sx={{ mb: 3 }}>Tasks ({tasks.length})</Typography>
+                <Typography variant="h6" sx={{ mb: 1 }}>Tasks ({tasks.length})</Typography>
                 {tasks.map((task) => {
                   return (
                     <RowMeasure key={task.id} id={task.id} onHeight={handleRowHeight}>
