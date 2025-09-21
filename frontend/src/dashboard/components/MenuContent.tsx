@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router-dom';
 
 const mainListItems = [
   { text: 'Tasks', icon: <AssignmentRoundedIcon />, path: '/' },
-  { text: 'Analytics', icon: <AnalyticsRoundedIcon />, path: '/analytics' },
+  { text: 'Timeline', icon: <AnalyticsRoundedIcon />, path: '/timeline' },
   { text: 'Team', icon: <PeopleRoundedIcon />, path: '/team' }
 ];
 
