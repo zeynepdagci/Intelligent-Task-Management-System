@@ -32,7 +32,7 @@ export type TeamMemberRow = {
   skills: string[];
 };
 
-const stringToInitials = (fullName: string) => {
+const getMemberInitials = (fullName: string) => {
   if (!fullName) return '?';
   const parts = fullName.trim().split(/\s+/);
   const first = parts[0]?.[0] ?? '';
@@ -121,7 +121,7 @@ function EditMemberDialog({
       }}>
         <Stack direction="row" alignItems="center" spacing={2}>
           <Avatar sx={{ width: 40, height: 40, fontWeight: 700 }}>
-            {stringToInitials(local.name)}
+            {getMemberInitials(local.name)}
           </Avatar>
           <Box sx={{ flex: 1 }}>
             <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1 }}>
@@ -164,7 +164,7 @@ function EditMemberDialog({
                   </InputAdornment>
                 ),
               },
-            }} autoFocus
+            }}
           />
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>

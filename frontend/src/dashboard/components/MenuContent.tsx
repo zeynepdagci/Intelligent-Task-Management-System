@@ -7,7 +7,7 @@ import Stack from '@mui/material/Stack';
 import AnalyticsRoundedIcon from '@mui/icons-material/AnalyticsRounded';
 import PeopleRoundedIcon from '@mui/icons-material/PeopleRounded';
 import AssignmentRoundedIcon from '@mui/icons-material/AssignmentRounded';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const mainListItems = [
   { text: 'Tasks', icon: <AssignmentRoundedIcon />, path: '/' },
@@ -17,13 +17,14 @@ const mainListItems = [
 
 export default function MenuContent() {
   const navigate = useNavigate();
-
+  const { search } = useLocation();
+  
   return (
     <Stack sx={{ flexGrow: 1, p: 1, justifyContent: 'space-between' }}>
       <List dense>
         {mainListItems.map((item, index) => (
           <ListItem key={index} disablePadding sx={{ display: 'block' }}>
-            <ListItemButton onClick={() => navigate(item.path)}>
+            <ListItemButton onClick={() => navigate(`${item.path}${search}`)}>
               <ListItemIcon>{item.icon}</ListItemIcon>
               <ListItemText primary={item.text} />
             </ListItemButton>

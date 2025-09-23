@@ -1,12 +1,5 @@
 import { useState, useMemo, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
-import {
-  Card,
-  CardContent,
-  Typography,
-  Chip,
-  Paper,
-  Tooltip,
-} from '@mui/material';
+import { Card, CardContent, Typography, Chip, Paper, Tooltip } from '@mui/material';
 import CssBaseline from '@mui/material/CssBaseline';
 import { CalendarMonth, Person } from '@mui/icons-material';
 import Box from '@mui/material/Box';
@@ -103,6 +96,18 @@ const toDate = (v: string | Date | null | undefined) => {
   return toUtcMidnight(d);
 };
 
+const MIN_MONTHS_VISIBLE = 3;
+
+const startOfMonthUTC = (d: Date) =>
+  new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
+
+const endOfMonthUTC = (d: Date) =>
+  new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0));
+
+const addMonthsUTC = (d: Date, n: number) =>
+  new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, d.getUTCDate()));
+
+
 const TaskCard: React.FC<{ task: TimelineTask }> = ({ task }) => {
   const duration = daysDiffInclusive(task.startDate, task.endDate);
 
@@ -194,9 +199,24 @@ const GanttTimeline: React.FC<{ tasks: TimelineTask[]; rowHeights: Record<string
     return offsets[offsets.length - 1] + (rowHeights[last.id] ?? 250);
   }, [tasks, offsets, rowHeights]);
 
-  const allDates = tasks.flatMap(task => [task.startDate, task.endDate]);
-  const minDate = toUtcMidnight(new Date(Math.min(...allDates.map(d => d.getTime()))));
-  const maxDate = toUtcMidnight(new Date(Math.max(...allDates.map(d => d.getTime()))));
+  const { minDate, maxDate } = useMemo(() => {
+    if (tasks.length > 0) {
+      const allDates = tasks.flatMap(t => [t.startDate, t.endDate]);
+      const rawMin = toUtcMidnight(new Date(Math.min(...allDates.map(d => d.getTime()))));
+      const rawMax = toUtcMidnight(new Date(Math.max(...allDates.map(d => d.getTime()))));
+
+      const startMonth = startOfMonthUTC(rawMin);
+      const endNeededForMinMonths = endOfMonthUTC(addMonthsUTC(startMonth, MIN_MONTHS_VISIBLE - 1));
+      const finalMax = rawMax > endNeededForMinMonths ? endOfMonthUTC(rawMax) : endNeededForMinMonths;
+
+      return { minDate: startMonth, maxDate: finalMax };
+    } else {
+      const today = toUtcMidnight(new Date());
+      const start = startOfMonthUTC(today);
+      const end = endOfMonthUTC(addMonthsUTC(start, MIN_MONTHS_VISIBLE - 1));
+      return { minDate: start, maxDate: end };
+    }
+  }, [tasks]);
 
   const timelineDays = useMemo(() => {
     const days: Date[] = [];
@@ -425,7 +445,7 @@ export default function Timeline(props: { disableCustomTheme?: boolean }) {
             minWidth: 0,
             height: '100dvh',
             backgroundColor: t.palette.mode === 'light' ? '#f3f5f8' : t.palette.background.default,
-            overflow: 'hidden',
+            overflow: 'auto',
             display: 'flex',
             flexDirection: 'column',
           })}
@@ -435,17 +455,16 @@ export default function Timeline(props: { disableCustomTheme?: boolean }) {
 
             <Paper
               sx={{
-                height: '90vh',
                 display: 'grid',
                 gridTemplateColumns: '380px 1fr',
-                gridAutoRows: 'minmax(250px, auto)',
+                gridAutoRows: 'auto',
                 gap: 2,
                 overflowY: 'auto',
                 overflowX: 'visible',
                 minHeight: 0,
                 borderColor: 'divider',
                 borderRadius: 2,
-                backgroundColor: '#fff',
+                backgroundColor: '#fff'
               }}
             >
               <Box sx={{ display: 'flex', flexDirection: 'column', pt: 3, pl: 2 }}>

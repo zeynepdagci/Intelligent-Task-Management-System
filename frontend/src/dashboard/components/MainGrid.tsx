@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   Box, Typography, Card, CardContent, Stack, Paper, Tooltip, IconButton, useTheme, TextField, MenuItem,
-  Select, FormControl, Dialog, DialogTitle, DialogContent, DialogActions, Button
+  Select, FormControl, Dialog, DialogTitle, DialogContent, DialogActions, Button, Chip
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import BugReportIcon from '@mui/icons-material/BugReport';
@@ -18,7 +18,6 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { useDroppable } from '@dnd-kit/core';
 import { useEffect, useRef } from 'react';
-import { Chip } from '@mui/material';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import { API_BASE } from "../../lib/api";
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
@@ -183,7 +182,6 @@ function AssigneeSelect({
   value: string;
   onChange: (v: string) => void;
   team: TeamMember[];
-  placeholder?: string;
 }) {
   return (
     <Select
@@ -191,8 +189,6 @@ function AssigneeSelect({
       value={value}
       onChange={(e) => onChange(e.target.value as string)}
       size="small"
-      displayEmpty
-      renderValue={(selected) => (selected as string)}
     >
       {team.map((m) => (
         <MenuItem key={m.email} value={m.name}>
@@ -228,9 +224,7 @@ export default function MainGrid() {
   const lastTextRef = useRef<string>("");
 
   const [team, setTeam] = useState<TeamMember[]>([]);
-  const [teamLoading, setTeamLoading] = useState<boolean>(false);
-  const [teamError, setTeamError] = useState<string | null>(null);
-
+ 
   async function runPredictions(desc: string) {
     if (ctrlRef.current) ctrlRef.current.abort();
     const ctrl = new AbortController();
@@ -288,8 +282,6 @@ export default function MainGrid() {
     let ignore = false;
     async function fetchTeam() {
       try {
-        setTeamLoading(true);
-        setTeamError(null);
         const res = await fetch(`${API_BASE}/team_members`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
@@ -302,9 +294,6 @@ export default function MainGrid() {
         if (!ignore) setTeam(members);
       } catch (err: any) {
         console.error("Error fetching team members:", err);
-        if (!ignore) setTeamError("Could not load team members");
-      } finally {
-        if (!ignore) setTeamLoading(false);
       }
     }
     fetchTeam();
@@ -558,7 +547,7 @@ export default function MainGrid() {
           })}
         </Box>
 
-        <DragOverlay dropAnimation={{ duration: 300, easing: 'ease' }}>
+        <DragOverlay>
           {activeTask ? <SortableTask task={activeTask} /> : null}
         </DragOverlay>
       </DndContext>
@@ -607,9 +596,7 @@ export default function MainGrid() {
                 value={newTask.assignee}
                 onChange={(v) => setNewTask({ ...newTask, assignee: v })}
                 team={team}
-                placeholder={
-                  teamLoading ? "Loading team..." : teamError ? "Failed to load team" : "Unassigned"
-                }
+               
               />
             </Box>
 
@@ -620,7 +607,6 @@ export default function MainGrid() {
               <TextField
                 fullWidth
                 multiline
-                minRows={1}
                 value={newTask.description}
                 onChange={(e) => {
                   const desc = e.target.value;
@@ -675,7 +661,7 @@ export default function MainGrid() {
 
       <Dialog open={editOpen} onClose={() => setEditOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>View / Edit Task</DialogTitle>
-        <DialogContent sx={{ minWidth: 340, width: '100%' }}>
+        <DialogContent sx={{ width: '100%' }}>
           <Stack spacing={3} sx={{ mt: 1 }}>
             <Box>
               <Typography variant="subtitle2" mb={0.5} color="text.secondary">
@@ -717,9 +703,7 @@ export default function MainGrid() {
                 value={editTask?.assignee || ''}
                 onChange={(v) => handleEditField('assignee', v)}
                 team={team}
-                placeholder={
-                  teamLoading ? "Loading team..." : teamError ? "Failed to load team" : "Unassigned"
-                }
+                
               />
             </Box>
 
