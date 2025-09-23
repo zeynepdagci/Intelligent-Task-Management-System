@@ -11,7 +11,7 @@ from app.utils.dynamodb import (
     add_team_member, get_all_team_members, delete_team_member, update_team_member,
     create_task, get_all_tasks, update_task_status, update_task_db, delete_the_task)
 from app.utils.matching_assignee import find_best_assignee
-import logging, time
+import time
 from app.utils.cache import make_cache_key, get_item, update_classify, update_assign
 
 # Logging in CloudWatch
@@ -57,6 +57,7 @@ os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
 # Classifier is initialized depending on CONFIG_TYPE
 if USE_ONNX_CLS:
+    # ONNX (quantized/quantizedCached) configs
     import onnxruntime as ort
     from transformers import DistilBertTokenizerFast
     from app.model_inference.model_loader import get_or_download_onnx_classifier
@@ -79,7 +80,7 @@ if USE_ONNX_CLS:
         (logits,) = ort_sess.run(["logits"], inputs)
         return logits
 else:
-    # PyTorch (baseline/cached) branch
+    # PyTorch (baseline/cached) configs
     from app.model_inference.model_loader import get_or_download_torch_model as get_torch_classifier
     import torch
     tokenizer, model = get_torch_classifier(
@@ -185,7 +186,6 @@ def classify_task(request: TaskRequest):
     result = {
         "label": LABELS[idx],
         "confidence": str(round(conf, 4)),
-        "model": BACKEND,
         "updated_at": datetime.now(timezone.utc).isoformat()
         }
 
@@ -193,9 +193,7 @@ def classify_task(request: TaskRequest):
         "label": result["label"],
         "confidence": result["confidence"],
         "cached": False,
-        "model": result["model"],
         "updated_at": result["updated_at"],
-        "version": MODEL_DIR,
         "inference_ms": float(inf_ms)
     }
     
@@ -224,8 +222,7 @@ def assign_task(request: TaskRequest):
     
     result = {
         "assigned_to": assignee["assigned_to"],
-        "similarity": str(assignee["similarity"]),
-        "model": BACKEND,
+        "similarity": assignee["similarity"],
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "inference_ms": assignee["inference_ms"]
     }
@@ -234,9 +231,7 @@ def assign_task(request: TaskRequest):
         "assigned_to": result["assigned_to"],
         "similarity": result["similarity"],
         "cached": False,
-        "model": result["model"],
         "updated_at": result["updated_at"],
-        "version": MODEL_DIR,
         "inference_ms": result["inference_ms"]
     }
 

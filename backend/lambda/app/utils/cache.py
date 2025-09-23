@@ -29,8 +29,7 @@ def update_classify(cache_key: str, description_preview: str, payload: dict):
             ":p": description_preview,
             ":c": payload,
             ":now": datetime.now(timezone.utc).isoformat()
-        },
-    )
+        })
 
 def update_assign(cache_key: str, description_preview: str, payload: dict):
     _table.update_item(
@@ -44,5 +43,4 @@ def update_assign(cache_key: str, description_preview: str, payload: dict):
             ":p": description_preview,
             ":a": payload,
             ":now": datetime.now(timezone.utc).isoformat()
-        },
-    )
+        })

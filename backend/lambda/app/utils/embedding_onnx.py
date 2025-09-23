@@ -31,10 +31,7 @@ def _s3_download_dir(bucket: str, prefix: str, local_dir: str):
             s3.download_file(bucket, key, dest)
 
 def _ensure_encoder_present():
-    """
-    If the ONNX encoder + tokenizer files are not present in ONNX_DIR,
-    pull them from S3 once per cold start.
-    """
+    #  If the ONNX encoder + tokenizer files are not present in ONNX_DIR, they are pulled from S3
     need_files = [
         ONNX_NAME,
         "tokenizer.json",

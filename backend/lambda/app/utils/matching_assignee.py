@@ -9,6 +9,17 @@ if USE_ONNX_EMB:
 else:
     from app.utils.embedding import get_embedding
 
+def score_each_member(task_vector, skillset):
+    best = -1.0
+
+    # "skillset" corresponds to 1 or more skills phrases, "skills" corresponds to 1 phrase in that set
+    for skills in skillset:
+        skills_vector = get_embedding(skills)
+        similarity = 1 - cosine(task_vector, skills_vector)
+        if similarity > best:
+            best = similarity
+    return best
+
 def find_best_assignee(task_description: str):
     t0 = time.perf_counter()
     task_vector = get_embedding(task_description)
@@ -17,12 +28,17 @@ def find_best_assignee(task_description: str):
     best_score = -1.0
 
     for member in get_all_team_members():
-        skills = member.get("skills")
-        skills_text = ", ".join(skills) if isinstance(skills, list) else str(skills)
-        skill_vector = get_embedding(skills_text)
-        similarity_score = 1 - cosine(task_vector, skill_vector)
+        skills = member.get("skills", [])
+        role = member.get("role", "")
+        if role:
+            skills = skills + [f"Role: {role}"]
+        similarity_score = score_each_member(task_vector, skills)
         if similarity_score > best_score:
             best_score = similarity_score
             best = member
-
-    return {"assigned_to": best["name"] if best else None, "similarity": float(best_score), "inference_ms": float(inference_ms)}
+    
+    return{
+        "assigned_to": best["name"] if best else None,
+        "similarity": float(best_score),
+        "inference_ms": float(inference_ms)
+    }

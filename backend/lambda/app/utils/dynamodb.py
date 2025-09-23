@@ -15,44 +15,34 @@ def get_all_team_members():
     return response.get('Items', [])
 
 def add_team_member(name: str, email: str, role: str, skills: list):
-    team_table.put_item(Item={
+    item = {
         "email": email,
         "name": name,
         "role": role,
         "skills": skills
-    })
-
-# TO ADD NEW TEAM MEMBERS FAST / WILL BE DELETED LATER!!!!
-# i added the csv file in root directory then deleted to avoid committing it.
-
-# import pandas as pd
-# df = pd.read_csv("../team_members.csv")
-# for _, row in df.iterrows():
-#     name = row["name"]
-#     email = row["email"]
-#     role = row["role"]
-#     skills = [skill.strip() for skill in row["skills"].split(",") if skill.strip()]
-#     print(f"Uploading: {name}, {email}, {role}, {skills}")
-#     add_team_member(name, email, role, skills)
-
+    }
+    team_table.put_item(Item=item)
+    return item
 
 def delete_team_member(email: str):
     team_table.delete_item(Key={"email": email
     })
 
 def update_team_member(name: str, email: str, role: str, skills: list):
-    team_table.update_item(Key={"email": email},
-                           UpdateExpression="SET #n = :name, #r = :role, #s = :skills",
-                           ExpressionAttributeNames={
-                               "#n": "name",
-                               "#r": "role",
-                               "#s": "skills",
-                            },
-                            ExpressionAttributeValues={
-                                ":name": name,
-                                ":role": role,
-                                ":skills": skills,
-                            })
+    team_table.update_item(
+        Key={"email": email},
+        UpdateExpression=(
+            "SET #n = :name, #r = :role, #s = :skills"),
+        ExpressionAttributeNames={
+            "#n": "name",
+            "#r": "role",
+            "#s": "skills",
+        },
+        ExpressionAttributeValues={
+            ":name": name,
+            ":role": role,
+            ":skills": skills,
+        })
 
 def create_task(task_data: dict) -> dict:
     task_id = str(uuid.uuid4())
@@ -77,7 +67,6 @@ def get_all_tasks() -> list:
     return response.get("Items", [])
 
 def update_task_status(task_id: str, new_status: str):
-    print(f"Updating task {task_id} to status: {new_status}")
     tasks_table.update_item(
         Key={"task_id": task_id},
         UpdateExpression="SET #s = :s",
@@ -107,8 +96,7 @@ def update_task_db(task_id: str, title: str, label: str, assigned_to: str, descr
             ":desc": description,
             ":due_date": due_date,
             ":status": status,
-        },
-    )
+        })
 
 def delete_the_task(task_id: str):
     tasks_table.delete_item(Key={"task_id": task_id
