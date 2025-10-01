@@ -1,6 +1,6 @@
 # Designing a Serverless AI-Enhanced Task Management System with Green Computing Strategies: A Performance and Sustainability Evaluation
 
-MSc dissertation project at City St George's, University of London (Jul 2025 – **Sep 2025**).
+MSc dissertation project at City St George's, University of London
 
 A cloud‑native task management system that classifies software tasks and suggests assignees using **DistilBERT**. The system evaluates **green computing strategies** (model quantization + output‑level caching) on **AWS Lambda** for both performance and sustainability.
 
@@ -13,7 +13,7 @@ A cloud‑native task management system that classifies software tasks and sugge
 * **Output‑level caching** (results + embeddings) to skip redundant inference
 * **ONNX Runtime quantization** for faster, lighter inference
 * **Four configurations**: baseline · quantized · cached · combined
-* **Metrics tracked**: inference latency, execution duration, memory usage, classification accuracy, CO₂ estimates
+* **Metrics tracked**: inference latency, execution duration, memory usage, classification accuracy, CO₂e estimates
 
 ## 🧰 Tech Stack
 
@@ -27,7 +27,6 @@ A cloud‑native task management system that classifies software tasks and sugge
 
 * FastAPI (Python)
 * AWS Lambda
-* Amazon API Gateway
 
 **AI / NLP**
 
@@ -41,17 +40,15 @@ A cloud‑native task management system that classifies software tasks and sugge
 * Amazon DynamoDB (serverless NoSQL)
 * Cache entries:
 
-  * Classification outputs: `{ taskText, category, assignedTo }`
-  * Developer skill embeddings (precomputed)
+  * Outputs: `{ label, assignee }`
 
 **Observability & Sustainability**
 
-* AWS CloudWatch + Lambda Insights
-* Carbon estimation: Cloud Carbon Footprint
+* AWS CloudWatch
 
 ## 🙏 Acknowledgements
 
-* Open‑source: Hugging Face Transformers, ONNX Runtime, FastAPI
+* Open‑source: Hugging Face Transformers, ONNX Runtime, FastAPI, MUI: The React component library https://mui.com
 
 
 Note: This project is developed for educational and demonstration purposes. Do not reuse or submit this work for academic credit.

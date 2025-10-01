@@ -40,6 +40,7 @@ const getMemberInitials = (fullName: string) => {
   return (first + last).toUpperCase();
 };
 
+// edit dialog for updating team member info and their skills
 function EditMemberDialog({
   open,
   member,
@@ -214,6 +215,7 @@ function EditMemberDialog({
   );
 }
 
+// team members are displayed, added, edited, and deleted
 export default function TeamInformation(props: { disableCustomTheme?: boolean }) {
   const [search, setSearch] = useState('');
   const [name, setName] = useState('');
@@ -279,6 +281,7 @@ export default function TeamInformation(props: { disableCustomTheme?: boolean })
     },
   ];
 
+  // to fetch team members
   const loadTeamMembers = async () => {
     try {
       const res = await fetch(`${API_BASE}/team_members`);
@@ -299,6 +302,7 @@ export default function TeamInformation(props: { disableCustomTheme?: boolean })
     loadTeamMembers();
   }, []);
 
+  // based on search input, rows are filtered
   const filteredRows = rows.filter((row) => {
     const searchLower = search.toLowerCase();
     return (
@@ -309,6 +313,7 @@ export default function TeamInformation(props: { disableCustomTheme?: boolean })
     );
   });
 
+  // to add new team members
   const handleSubmit = async () => {
     const _emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -349,6 +354,7 @@ export default function TeamInformation(props: { disableCustomTheme?: boolean })
     }
   };
 
+  // to delete team members
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     try {
@@ -371,6 +377,8 @@ export default function TeamInformation(props: { disableCustomTheme?: boolean })
     setEditMember(member);
     setEditOpen(true);
   };
+  
+  // to save updated team member details
   const handleEditSave = async (memberInfo: Omit<TeamMemberRow, 'id'>) => {
     try {
       const res = await fetch(`${API_BASE}/team_member/${memberInfo.email}`, {

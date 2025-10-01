@@ -66,6 +66,7 @@ type TeamMember = {
   name: string;
 };
 
+// draggable/sortable task card in the columns is rendered
 function SortableTask({ task, onOpen }: { task: Task; onOpen?: (t: Task) => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
@@ -156,6 +157,7 @@ function SortableTask({ task, onOpen }: { task: Task; onOpen?: (t: Task) => void
   );
 }
 
+// a column is rendered for the tasks to be dropped in the board
 function DroppableColumn({ id, children }: { id: string; children: React.ReactNode }) {
   const { setNodeRef } = useDroppable({ id });
   return (
@@ -174,6 +176,7 @@ function DroppableColumn({ id, children }: { id: string; children: React.ReactNo
   );
 }
 
+// dropdown is rendered for selecting an assignee
 function AssigneeSelect({
   value,
   onChange,
@@ -225,6 +228,7 @@ export default function MainGrid() {
 
   const [team, setTeam] = useState<TeamMember[]>([]);
  
+  // label and assignee predictions based on task description are fetched 
   async function runPredictions(desc: string) {
     if (ctrlRef.current) ctrlRef.current.abort();
     const ctrl = new AbortController();
@@ -426,6 +430,7 @@ export default function MainGrid() {
 
   const activeTask = tasks.find((t) => t.id === activeId);
 
+  // add new task dialog is opened for the specific column
   const handleOpenDialog = (column: Task['status']) => {
     setNewTask({
       id: '',
@@ -439,6 +444,7 @@ export default function MainGrid() {
     setOpenDialog(true);
   };
 
+  // the update dialog is opened for the selected task
   const handleOpenEdit = (task: Task) => {
     setEditTask({ ...task });
     setEditOpen(true);
@@ -448,6 +454,7 @@ export default function MainGrid() {
     setEditTask(prev => (prev ? { ...prev, [key]: value } : prev));
   };
 
+  // updated task deatils are saved to backend and state is updated
   const handleEditSave = async () => {
     if (!editTask) return;
     try {

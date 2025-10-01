@@ -39,6 +39,7 @@ const getStatusColor = (status: any) => {
   }
 };
 
+// size changes of the element are observed to adjust timeline dynamically
 function useResizeObserver<T extends HTMLElement>(
   onSize: (rect: DOMRectReadOnly) => void
 ) {
@@ -81,12 +82,14 @@ const BAR_H = 60;
 const toUtcMidnight = (d: Date) =>
   new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
 
+// the number of days between two days are calculated to position the task lengths
 const daysDiff = (a: Date, b: Date) => {
   const A = toUtcMidnight(a).getTime();
   const B = toUtcMidnight(b).getTime();
   return Math.floor((B - A) / DAY_MS);
 };
 
+// duration of the tasks are calculated
 const daysDiffInclusive = (a: Date, b: Date) =>
   Math.max(1, daysDiff(a, b) + 1);
 
@@ -107,7 +110,7 @@ const endOfMonthUTC = (d: Date) =>
 const addMonthsUTC = (d: Date, n: number) =>
   new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, d.getUTCDate()));
 
-
+// task info is displayed
 const TaskCard: React.FC<{ task: TimelineTask }> = ({ task }) => {
   const duration = daysDiffInclusive(task.startDate, task.endDate);
 
@@ -182,6 +185,7 @@ const TaskCard: React.FC<{ task: TimelineTask }> = ({ task }) => {
   );
 };
 
+// gantt timeline is created
 const GanttTimeline: React.FC<{ tasks: TimelineTask[]; rowHeights: Record<string, number>; rowGap: number; }> = ({ tasks, rowHeights, rowGap }) => {
   const offsets = useMemo(() => {
     const arr: number[] = [];
@@ -396,6 +400,7 @@ const GanttTimeline: React.FC<{ tasks: TimelineTask[]; rowHeights: Record<string
   );
 };
 
+// tasks are fetched and tasks cards and timeline bars are rendered
 export default function Timeline(props: { disableCustomTheme?: boolean }) {
   const [tasks, setTasks] = useState<TimelineTask[]>([]);
   const [rowHeights, setRowHeights] = useState<Record<string, number>>({});
