@@ -27,6 +27,7 @@ def find_best_assignee(task_description: str):
     best = None
     best_score = -1.0
 
+    # both role and skills are used to get the similarity score
     for member in get_all_team_members():
         skills = member.get("skills", [])
         role = member.get("role", "")

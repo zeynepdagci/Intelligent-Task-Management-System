@@ -4,14 +4,18 @@ import onnxruntime as ort
 import boto3
 from transformers import DistilBertTokenizerFast
 
+# ONNX model and the tokenizer files are stored in Lambda's writable /tmp to be downloaded from S3
 ONNX_DIR   = os.environ.get("ONNX_EMB_DIR", "/tmp/distilbert_onnx_encoder_v2")
+
 ONNX_NAME  = os.environ.get("ONNX_EMB_NAME", "distilbert-base-int8.onnx")
 
 S3_BUCKET      = os.environ.get("ONNX_EMB_BUCKET")
 S3_KEY_PREFIX  = os.environ.get("ONNX_EMB_KEY_PREFIX")
 
+# Hugging Face's cache is redirected to /tmp 
 HF_HOME = os.environ.get("HF_HOME", "/tmp/hf")
 TRANSFORMERS_CACHE = os.environ.get("TRANSFORMERS_CACHE", HF_HOME)
+
 os.environ.setdefault("HF_HOME", HF_HOME)
 os.environ.setdefault("TRANSFORMERS_CACHE", TRANSFORMERS_CACHE)
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
@@ -31,7 +35,7 @@ def _s3_download_dir(bucket: str, prefix: str, local_dir: str):
             s3.download_file(bucket, key, dest)
 
 def _ensure_encoder_present():
-    #  If the ONNX encoder + tokenizer files are not present in ONNX_DIR, they are pulled from S3
+    #  If the ONNX encoder  and tokenizer files are not present in ONNX_DIR, they are pulled from S3
     need_files = [
         ONNX_NAME,
         "tokenizer.json",

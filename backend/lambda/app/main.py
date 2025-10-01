@@ -16,7 +16,6 @@ from app.utils.cache import make_cache_key, get_item, update_classify, update_as
 
 # Logging in CloudWatch
 import logging
-
 root = logging.getLogger()
 root.setLevel(logging.INFO)
 for h in root.handlers:
@@ -38,7 +37,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+# task labels
 LABELS = ["Bug Fix", "Feature Request", "Documentation"]
 
 CONFIG_TYPE = os.environ.get("CONFIG_TYPE", "baseline").lower() # Config switch: ONNX vs PyTorch
@@ -46,7 +45,7 @@ USE_ONNX_CLS = "quantized" in CONFIG_TYPE
 USE_CACHE = "cached" in CONFIG_TYPE
 BACKEND = "onnx" if USE_ONNX_CLS else "pytorch"
 
-# S3 location to be used only when needed
+# S3 location to be used when needed
 MODEL_DIR = os.environ.get("MODEL_DIR", "/tmp/distilbert_pytorch_v2")
 MODEL_BUCKET = os.environ.get("MODEL_BUCKET")  # In S3, zeynep-distilbert-models
 MODEL_KEY_PREFIX = os.environ.get("MODEL_KEY_PREFIX")  #  models/distilbert_pytorch_v2
@@ -63,7 +62,7 @@ if USE_ONNX_CLS:
     from app.model_inference.model_loader import get_or_download_onnx_classifier
     ONNX_CLS_NAME = os.environ.get("ONNX_CLS_NAME", "model-quantized.onnx")
 
-    # Downloads from S3 if needed; returns (local_dir, onnx_path)
+    # Downloads from S3 if needed; returns
     _, onnx_path = get_or_download_onnx_classifier(
         local_dir=MODEL_DIR,
         bucket=MODEL_BUCKET,
@@ -116,10 +115,12 @@ class TaskUpdate(BaseModel):
     due_date: str
     status: str
 
+# returns all team members
 @app.get("/team_members")
 def get_members():
     return get_all_team_members()
 
+# new team member is added
 @app.post("/add_team_member")
 def add_member(member: TeamMember):
     try:
@@ -135,6 +136,7 @@ def add_member(member: TeamMember):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+# team member is deleted
 @app.delete("/team_member/{email}")
 def delete_member(email: str):
     try:
@@ -143,6 +145,7 @@ def delete_member(email: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# team member info is updated
 @app.put("/team_member/{email}")
 def update_member(email: str, member: TeamMember):
     try:
@@ -156,6 +159,7 @@ def update_member(email: str, member: TeamMember):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# task is classified into one of the three categories
 @app.post("/classify")
 def classify_task(request: TaskRequest):
     print("ENTER /classify")
@@ -164,6 +168,7 @@ def classify_task(request: TaskRequest):
     if not request.description:
         raise HTTPException(status_code=400, detail="Task description cannot be empty.")
 
+    # create a cache key and if an entry found it returns the label from db table 
     if USE_CACHE:
         cache_key = make_cache_key(CONFIG_TYPE, request.description)
         item  = get_item(cache_key)
@@ -175,7 +180,8 @@ def classify_task(request: TaskRequest):
                 "cached": True,
                 "inference_ms": 0.0,
             }
-        
+    
+    # in the case of "miss", Pytorch or ONNX version of the model runs depending on CONFIG_TYPE
     import numpy as np
     t0 = time.perf_counter()
     logits = infer_logits(request.description)
@@ -185,7 +191,7 @@ def classify_task(request: TaskRequest):
     conf = float(probs[idx])
     result = {
         "label": LABELS[idx],
-        "confidence": str(round(conf, 4)),
+        "confidence": round(conf, 4),
         "updated_at": datetime.now(timezone.utc).isoformat()
         }
 
@@ -196,7 +202,8 @@ def classify_task(request: TaskRequest):
         "updated_at": result["updated_at"],
         "inference_ms": float(inf_ms)
     }
-    
+
+# task assigned to a team member
 @app.post("/assign")
 def assign_task(request: TaskRequest):
     print("ENTER /assign")
@@ -205,6 +212,7 @@ def assign_task(request: TaskRequest):
     if not request.description:
         raise HTTPException(status_code=400, detail="Task description is required.")
     
+    # create a cache key and if an entry found it returns the assignee from db table 
     if USE_CACHE:
         cache_key = make_cache_key(CONFIG_TYPE, request.description)
         item = get_item(cache_key)
@@ -235,11 +243,14 @@ def assign_task(request: TaskRequest):
         "inference_ms": result["inference_ms"]
     }
 
+# new task is created
 @app.post("/tasks")
 def api_create_task(task: dict):
     try:
         new_task = create_task(task)
         desc = new_task.get("description")
+
+        # if the config has caching then the label and assignee are stored in the CachedItems table
         if USE_CACHE and desc:
             cache_key = make_cache_key(CONFIG_TYPE, desc)
             now = datetime.now(timezone.utc).isoformat()
@@ -265,6 +276,7 @@ def api_create_task(task: dict):
         import traceback; traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+# all tasks are returned
 @app.get("/tasks")
 def api_get_tasks():
     try:
@@ -274,6 +286,7 @@ def api_get_tasks():
         import traceback; traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+ # the task status is updated when it is dragged to another column
 @app.put("/task/{task_id}")
 def update_status(task_id: str, update: TaskStatusUpdate):
     try:
@@ -282,6 +295,7 @@ def update_status(task_id: str, update: TaskStatusUpdate):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# task details are updated
 @app.put("/task/{task_id}/update")
 def update_task_details(task_id: str, taskUpdate: TaskUpdate):
     try:
@@ -297,7 +311,8 @@ def update_task_details(task_id: str, taskUpdate: TaskUpdate):
         return {"message": "Task updated successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+# task is deleted
 @app.delete("/task/{task_id}")
 def delete_task(task_id: str):
     try:

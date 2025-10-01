@@ -9,7 +9,7 @@ def _normalize(text: str) -> str:
     return " ".join(text.strip().lower().split())
 
 def make_cache_key(config_type: str, description: str) -> str:
-    #config_type: 'baseline' | 'cached' | 'quantized' | 'quantizedCached'
+    #config_type: 'cached' or 'quantizedCached'
     h = hashlib.sha256(_normalize(description).encode("utf-8")).hexdigest()[:32]
     return f"{config_type}|{h}"
 

@@ -1,3 +1,6 @@
+# Fine tuning was completed and saved as the 2nd version because a few rows were updated in the fine tuning dataset
+# 1st version of the model is no longer valid, 2nd version is used throughout the project
+
 import os, random, numpy as np, pandas as pd
 from pathlib import Path
 from sklearn.model_selection import train_test_split
@@ -8,7 +11,6 @@ from transformers import (
 )
 
 SEED = 42
-# random.seed(SEED); np.random.seed(SEED); os.environ["PYTHONHASHSEED"] = str(SEED)
 
 # Dataset is loaded
 df = pd.read_csv("fine_tuning_dataset.csv")
@@ -45,17 +47,14 @@ training_args = TrainingArguments(
     save_strategy="no",
     seed=SEED
 )
-
 trainer = Trainer(
     model=model,
     args=training_args,
     train_dataset=train_tok,
     eval_dataset=val_tok,
-    tokenizer=tokenizer,
+    tokenizer=tokenizer
 )
-
 trainer.train()
-
 save_path = Path("backend/models/distilbert_pytorch_v2")
 save_path.mkdir(parents=True, exist_ok=True)
 model.save_pretrained(save_path)

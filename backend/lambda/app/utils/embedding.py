@@ -2,6 +2,7 @@ import os
 import torch
 from transformers import DistilBertTokenizer, DistilBertModel
 
+# model is loaded from /tmp/distilbert_pytorch_v2
 MODEL_DIR = os.getenv("MODEL_DIR", "/tmp/distilbert_pytorch_v2")
 
 _tokenizer = None

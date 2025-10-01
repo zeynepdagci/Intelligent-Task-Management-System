@@ -1,3 +1,5 @@
+# file is used to export the DistilBERT encoder fromm PyTorch to ONNX format by generating both FP32 model and INT8 version
+
 import os, torch
 from transformers import AutoTokenizer, DistilBertModel
 from onnxruntime.quantization import quantize_dynamic, QuantType
@@ -30,7 +32,7 @@ with torch.no_grad():
         },
         opset_version=14
     )
-
+# post-training dynamic quantization
 quantize_dynamic(onnx_path, quantized_path, weight_type=QuantType.QInt8)
 
 tok.save_pretrained(OUT_DIR)
