@@ -1,15 +1,17 @@
-# Dashboard template
+# Frontend – Intelligent Task Management System
 
-## Usage
+**1. What does the frontend do?**
 
-<!-- #target-branch-reference -->
+> *"It provides the UI for submitting tasks and receiving AI predictions, managing team members, and viewing tasks on a timeline. It communicates with the serverless backend via REST API."*
 
-1. Copy these folders (`dashboard` and `shared-theme`) into your project, or one of the [example projects](https://github.com/mui/material-ui/tree/master/examples).
-2. Make sure your project has the required dependencies: @mui/material, @mui/icons-material, @emotion/styled, @emotion/react, @mui/x-charts, @mui/x-date-pickers, @mui/x-data-grid, @mui/x-tree-view, dayjs
-3. Import and use the `Dashboard` component.
+**2. Why React + TypeScript + Vite?**
 
-## Demo
+> *"React is component-based and widely adopted, TypeScript adds static typing to catch errors early, and Vite provides a fast development and build experience — together they allow the UI to be built and iterated on quickly without sacrificing maintainability."*
 
-<!-- #host-reference -->
+**3. Why MUI (Material UI)?**
 
-View the demo at https://mui.com/material-ui/getting-started/templates/dashboard/.
+> *"MUI provides a consistent, accessible component library out of the box. Using it meant UI effort could stay focused on the research features (task submission, AI results, team management) rather than on styling from scratch."*
+
+**4. Why deploy on Vercel?**
+
+> *"Vercel offers zero-configuration deployment from the repository and provides a stable public URL, which is needed to test the full system end-to-end and demonstrate it as part of the dissertation."*

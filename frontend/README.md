@@ -1,54 +1,17 @@
-# React + TypeScript + Vite
+# Frontend – Intelligent Task Management System
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**1. What does the frontend do?**
 
-Currently, two official plugins are available:
+> *"It provides the UI for submitting tasks and receiving AI predictions, managing team members, and viewing tasks on a timeline. It communicates with the serverless backend via REST API."*
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+**2. Why React + TypeScript + Vite?**
 
-## Expanding the ESLint configuration
+> *"React is component-based and widely adopted, TypeScript adds static typing to catch errors early, and Vite provides a fast development and build experience — together they allow the UI to be built and iterated on quickly without sacrificing maintainability."*
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+**3. Why MUI (Material UI)?**
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+> *"MUI provides a consistent, accessible component library out of the box. Using it meant UI effort could stay focused on the research features (task submission, AI results, team management) rather than on styling from scratch."*
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+**4. Why deploy on Vercel?**
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+> *"Vercel offers zero-configuration deployment from the repository and provides a stable public URL, which is needed to test the full system end-to-end and demonstrate it as part of the dissertation."*
